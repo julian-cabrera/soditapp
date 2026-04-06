@@ -18,6 +18,7 @@ type App struct {
 	ctx          context.Context
 	db           *sql.DB
 	migrationsFS fs.FS
+	seedsFS      fs.FS
 
 	ZoneSvc          *service.ZoneService
 	ClientSvc        *service.ClientService
@@ -27,9 +28,10 @@ type App struct {
 
 // NewApp creates a new App application struct.
 // Services are allocated here (so Bind pointers are non-nil) and initialized in startup().
-func NewApp(migrationsFS fs.FS) *App {
+func NewApp(migrationsFS, seedsFS fs.FS) *App {
 	return &App{
 		migrationsFS:     migrationsFS,
+		seedsFS:          seedsFS,
 		ZoneSvc:          &service.ZoneService{},
 		ClientSvc:        &service.ClientService{},
 		ProductSvc:       &service.ProductService{},
@@ -56,6 +58,11 @@ func (a *App) startup(ctx context.Context) {
 
 	if err := database.RunMigrations(a.db, a.migrationsFS); err != nil {
 		runtime.LogFatalf(ctx, "Failed to run migrations: %s", err.Error())
+		return
+	}
+
+	if err := database.RunSeeds(a.db, a.seedsFS); err != nil {
+		runtime.LogFatalf(ctx, "Failed to run seeds: %s", err.Error())
 		return
 	}
 

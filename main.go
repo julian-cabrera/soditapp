@@ -14,9 +14,12 @@ var assets embed.FS
 //go:embed db/migrations/*.sql
 var migrationsFS embed.FS
 
+//go:embed db/seeds/*.sql
+var seedsFS embed.FS
+
 func main() {
 	// Create an instance of the app structure
-	app := NewApp(migrationsFS)
+	app := NewApp(migrationsFS, seedsFS)
 
 	// Create application with options
 	err := wails.Run(&options.App{

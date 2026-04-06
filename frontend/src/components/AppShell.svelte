@@ -19,7 +19,7 @@
 </script>
 
 <div class="flex h-screen">
-  <nav class="flex w-48 flex-col gap-1 border-r bg-muted/30 p-3">
+  <nav class="print-hidden flex w-48 flex-col gap-1 border-r bg-muted/30 p-3">
     <h1 class="mb-4 px-2 text-sm font-semibold tracking-tight">SoditApp</h1>
     {#each navItems as item}
       <button

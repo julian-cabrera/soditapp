@@ -4,13 +4,61 @@ import {
 } from "wailsjs/go/service/ClientProductService";
 import { service, type dto } from "wailsjs/go/models";
 
+export interface ClientGroup {
+  clientId: number;
+  clientName: string;
+  clientAddress: string;
+  clientBalance: number;
+  entries: dto.DeliveryEntryDTO[];
+}
+
+export function groupEntriesByClient(
+  entries: dto.DeliveryEntryDTO[],
+): ClientGroup[] {
+  const groups: ClientGroup[] = [];
+  let lastClientId = -1;
+  for (const entry of entries) {
+    if (entry.client_id === lastClientId) {
+      groups.at(-1)!.entries.push(entry);
+    } else {
+      groups.push({
+        clientId: entry.client_id,
+        clientName: entry.client_name,
+        clientAddress: entry.client_address,
+        clientBalance: entry.client_balance,
+        entries: [entry],
+      });
+      lastClientId = entry.client_id;
+    }
+  }
+  return groups;
+}
+
 let sheets = $state<dto.DeliverySheetDTO[]>([]);
 let loading = $state(false);
 let currentPage = $state(0);
+let previewMode = $state(false);
 let entryEdits = $state<Map<string, { charged: number; credit: number }>>(
   new Map(),
 );
 let selectedZoneId = $state<number | undefined>(undefined);
+
+function getInitialWeekRange(): { start: Date; end: Date } {
+  const d = new Date();
+  const day = d.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(0, 0, 0, 0);
+  return { start: monday, end: sunday };
+}
+
+const initialWeek = getInitialWeekRange();
+let weekStart = $state<Date>(initialWeek.start);
+let weekEnd = $state<Date>(initialWeek.end);
 
 export function getSheets() {
   return sheets;
@@ -32,8 +80,30 @@ export function getSelectedZoneId() {
   return selectedZoneId;
 }
 
+export function getWeekStart() {
+  return weekStart;
+}
+
+export function getWeekEnd() {
+  return weekEnd;
+}
+
+export function getPreviewMode() {
+  return previewMode;
+}
+
+export function setPreviewMode(value: boolean) {
+  previewMode = value;
+}
+
+export function setWeekRange(start: Date, end: Date) {
+  weekStart = start;
+  weekEnd = end;
+}
+
 export async function fetchDeliverySheets(zoneId: number) {
   selectedZoneId = zoneId;
+  previewMode = false;
   loading = true;
   try {
     sheets = await GetDeliverySheets(zoneId);
