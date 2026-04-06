@@ -17,4 +17,4 @@ export function GetClientBalances(arg1:number):Promise<Array<model.ClientProduct
 
 export function GetDeliverySheets(arg1:number):Promise<Array<dto.DeliverySheetDTO>>;
 
-export function Init(arg1:context.Context,arg2:sql.DB,arg3:repository.ClientProductRepository,arg4:repository.ZoneRepository):Promise<void>;
+export function Init(arg1:context.Context,arg2:sql.DB,arg3:repository.ClientProductRepository,arg4:repository.ZoneRepository,arg5:repository.DeliveryTransactionRepository):Promise<void>;

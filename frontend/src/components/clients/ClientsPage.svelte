@@ -1,6 +1,6 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
-  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Coins01Icon, Download01Icon } from "@hugeicons/core-free-icons";
+  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Coins01Icon, Download01Icon, TimeScheduleIcon } from "@hugeicons/core-free-icons";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
@@ -19,6 +19,7 @@
   import ClientUnregisterDialog from "./ClientUnregisterDialog.svelte";
   import ClientBalancesDialog from "./ClientBalancesDialog.svelte";
   import ImportClientsDialog from "./ImportClientsDialog.svelte";
+  import DeliveryHistoryDialog from "./DeliveryHistoryDialog.svelte";
   import type { model } from "wailsjs/go/models";
 
   async function exportClients() {
@@ -43,8 +44,10 @@
   let unregisterOpen = $state(false);
   let balancesOpen = $state(false);
   let importOpen = $state(false);
+  let historyOpen = $state(false);
   let selectedClient = $state<model.Client | undefined>(undefined);
   let balancesClient = $state<model.Client | undefined>(undefined);
+  let historyClient = $state<model.Client | undefined>(undefined);
   let selectedZoneId = $state<string | undefined>(undefined);
   let searchQuery = $state("");
 
@@ -92,6 +95,11 @@
   function openBalances(client: model.Client) {
     balancesClient = client;
     balancesOpen = true;
+  }
+
+  function openHistory(client: model.Client) {
+    historyClient = client;
+    historyOpen = true;
   }
 </script>
 
@@ -161,6 +169,9 @@
             </Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
+                <Button variant="ghost" size="icon-xs" onclick={() => openHistory(client)} title="Ver Historial">
+                  <HugeiconsIcon icon={TimeScheduleIcon} size={14} />
+                </Button>
                 <Button variant="ghost" size="icon-xs" onclick={() => openBalances(client)} title="Saldos">
                   <HugeiconsIcon icon={Coins01Icon} size={14} />
                 </Button>
@@ -190,3 +201,7 @@
 {/if}
 
 <ImportClientsDialog bind:open={importOpen} />
+
+{#if historyClient}
+  <DeliveryHistoryDialog bind:open={historyOpen} clientId={historyClient.id} clientName={historyClient.name} />
+{/if}

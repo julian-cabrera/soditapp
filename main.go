@@ -39,6 +39,7 @@ func main() {
 			app.ClientProductSvc,
 			app.ExportSvc,
 			app.ImportSvc,
+			app.ReportSvc,
 		},
 	})
 
