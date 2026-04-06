@@ -250,7 +250,7 @@ credit_units    INTEGER
 
 > Requires a new `delivery_transaction` table persisted on every `ConfirmDelivery` call. Tasks 1–3 are backend; Tasks 4–5 are frontend. Task 1 → Task 2 → Task 3 → Tasks 4 & 5.
 
-#### Task 1 — Backend: Delivery Transaction Table & Repository
+#### Task 1 — Backend: Delivery Transaction Table & Repository ✅
 - Migration: `delivery_transaction` (id, client_id FK → Client, product_id FK → Product, charged_units INTEGER, credit_units INTEGER, delivery_date DATE DEFAULT CURRENT_DATE)
 - Model: `DeliveryTransaction` struct in `backend/model/`
 - Repository: `backend/repository/delivery_transaction_repository.go`
@@ -259,12 +259,12 @@ credit_units    INTEGER
   - `GetByZone(ctx, zoneID, startDate, endDate string)` → `[]DeliveryTransactionRow` (JOINs client to filter by zone)
 - **Files:** `db/migrations/005_delivery_transaction.sql` (new), `backend/model/delivery_transaction.go` (new), `backend/repository/delivery_transaction_repository.go` (new)
 
-#### Task 2 — Backend: Record Transactions on Delivery Confirm
+#### Task 2 — Backend: Record Transactions on Delivery Confirm ✅
 - Inject `DeliveryTransactionRepository` into `ClientProductService`
 - Extend `ConfirmDelivery` to call `InsertTx` within the existing DB transaction for each non-zero adjustment
 - **Files:** `backend/service/client_product_service.go`, `app.go`
 
-#### Task 3 — Backend: Report Service & DTOs
+#### Task 3 — Backend: Report Service & DTOs ✅
 - New `backend/dto/report.go`:
   - `DeliveryHistoryEntryDTO` (clientID, clientName, productID, productName, chargedUnits, creditUnits, deliveryDate)
   - `ZoneReportEntryDTO` (same fields)
@@ -273,14 +273,14 @@ credit_units    INTEGER
   - `GetZoneReport(zoneID int, startDate, endDate string) ([]ZoneReportEntryDTO, error)`
 - **Files:** `backend/dto/report.go` (new), `backend/service/report_service.go` (new), `app.go`
 
-#### Task 4 — Frontend: Client Delivery History Dialog
+#### Task 4 — Frontend: Client Delivery History Dialog ✅
 - New `DeliveryHistoryDialog.svelte` — props: `clientId`, `clientName`, `open` ($bindable)
 - On open: start/end date inputs (default last 30 days) + "Buscar" button → calls `GetClientHistory`
 - Table columns: Fecha | Producto | Cobrado | Fiado
 - Triggered by "Ver Historial" button added to `ClientsPage.svelte`
 - **Files:** `frontend/src/components/clients/DeliveryHistoryDialog.svelte` (new), `frontend/src/components/clients/ClientsPage.svelte`
 
-#### Task 5 — Frontend: Zone Reports Page
+#### Task 5 — Frontend: Zone Reports Page ✅
 - New `ZoneReportsPage.svelte` — zone selector + start/end date inputs + "Buscar" button
 - Table: Fecha | Cliente | Producto | Cobrado | Fiado, sorted by date then client
 - Add "Reportes" nav entry in `AppShell.svelte`; wire page in `App.svelte`

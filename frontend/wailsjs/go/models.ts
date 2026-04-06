@@ -26,6 +26,30 @@ export namespace dto {
 	        this.credit_units = source["credit_units"];
 	    }
 	}
+	export class DeliveryHistoryEntryDTO {
+	    client_id: number;
+	    client_name: string;
+	    product_id: number;
+	    product_name: string;
+	    charged_units: number;
+	    credit_units: number;
+	    delivery_date: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DeliveryHistoryEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.client_id = source["client_id"];
+	        this.client_name = source["client_name"];
+	        this.product_id = source["product_id"];
+	        this.product_name = source["product_name"];
+	        this.charged_units = source["charged_units"];
+	        this.credit_units = source["credit_units"];
+	        this.delivery_date = source["delivery_date"];
+	    }
+	}
 	export class DeliverySheetDTO {
 	    zone_id: number;
 	    zone_name: string;
@@ -64,6 +88,30 @@ export namespace dto {
 		    }
 		    return a;
 		}
+	}
+	export class ZoneReportEntryDTO {
+	    client_id: number;
+	    client_name: string;
+	    product_id: number;
+	    product_name: string;
+	    charged_units: number;
+	    credit_units: number;
+	    delivery_date: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ZoneReportEntryDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.client_id = source["client_id"];
+	        this.client_name = source["client_name"];
+	        this.product_id = source["product_id"];
+	        this.product_name = source["product_name"];
+	        this.charged_units = source["charged_units"];
+	        this.credit_units = source["credit_units"];
+	        this.delivery_date = source["delivery_date"];
+	    }
 	}
 
 }
@@ -191,6 +239,18 @@ export namespace repository {
 	
 	    }
 	}
+	export class DeliveryTransactionRepository {
+	
+	
+	    static createFrom(source: any = {}) {
+	        return new DeliveryTransactionRepository(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	
+	    }
+	}
 	export class ProductRepository {
 	
 	
@@ -224,6 +284,7 @@ export namespace service {
 	    client_id: number;
 	    product_id: number;
 	    delta: number;
+	    charged_units: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new BalanceAdjustment(source);
@@ -234,6 +295,7 @@ export namespace service {
 	        this.client_id = source["client_id"];
 	        this.product_id = source["product_id"];
 	        this.delta = source["delta"];
+	        this.charged_units = source["charged_units"];
 	    }
 	}
 	export class ImportResult {

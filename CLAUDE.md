@@ -31,6 +31,7 @@ pnpm dlx shadcn-svelte@latest add <component-name>
   - `src/lib/components/ui/` — shadcn-svelte primitives (managed by shadcn CLI, avoid manual edits)
   - `src/lib/utils.ts` — `cn()` helper for Tailwind class merging
   - Path alias: `$lib` → `src/lib/`
+  - Reference: https://www.shadcn-svelte.com/llms.txt
 
 ### Data Flow
 Frontend → Wails-generated TS bindings → Go bound methods → Service layer → Repository layer → PostgreSQL

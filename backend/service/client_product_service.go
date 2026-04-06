@@ -12,9 +12,10 @@ import (
 
 // BalanceAdjustment represents a single balance change in a delivery confirmation.
 type BalanceAdjustment struct {
-	ClientID  int `json:"client_id"`
-	ProductID int `json:"product_id"`
-	Delta     int `json:"delta"`
+	ClientID     int `json:"client_id"`
+	ProductID    int `json:"product_id"`
+	Delta        int `json:"delta"`          // negative value = credit units (increases debt)
+	ChargedUnits int `json:"charged_units"`  // units paid on the spot (no balance change)
 }
 
 // ClientProductService exposes client-product balance operations as Wails-bound methods.
@@ -23,14 +24,16 @@ type ClientProductService struct {
 	db       *sql.DB
 	repo     *repository.ClientProductRepository
 	zoneRepo *repository.ZoneRepository
+	txRepo   *repository.DeliveryTransactionRepository
 }
 
 // Init sets the runtime dependencies after Wails startup.
-func (s *ClientProductService) Init(ctx context.Context, db *sql.DB, repo *repository.ClientProductRepository, zoneRepo *repository.ZoneRepository) {
+func (s *ClientProductService) Init(ctx context.Context, db *sql.DB, repo *repository.ClientProductRepository, zoneRepo *repository.ZoneRepository, txRepo *repository.DeliveryTransactionRepository) {
 	s.ctx = ctx
 	s.db = db
 	s.repo = repo
 	s.zoneRepo = zoneRepo
+	s.txRepo = txRepo
 }
 
 func (s *ClientProductService) EnsureClientProduct(clientID, productID int) (model.ClientProduct, error) {
@@ -58,11 +61,20 @@ func (s *ClientProductService) ConfirmDelivery(adjustments []BalanceAdjustment) 
 	defer tx.Rollback()
 
 	for _, adj := range adjustments {
-		if adj.Delta == 0 {
+		if adj.Delta == 0 && adj.ChargedUnits == 0 {
 			continue
 		}
-		if err := s.repo.AdjustBalanceTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.Delta); err != nil {
-			return fmt.Errorf("adjusting balance for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
+		if adj.Delta != 0 {
+			if err := s.repo.AdjustBalanceTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.Delta); err != nil {
+				return fmt.Errorf("adjusting balance for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
+			}
+		}
+		creditUnits := -adj.Delta // delta is stored as negative; invert to get positive credit count
+		if creditUnits < 0 {
+			creditUnits = 0
+		}
+		if err := s.txRepo.InsertTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.ChargedUnits, creditUnits); err != nil {
+			return fmt.Errorf("recording transaction for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
 		}
 	}
 

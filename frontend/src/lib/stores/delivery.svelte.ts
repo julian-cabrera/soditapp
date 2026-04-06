@@ -143,13 +143,14 @@ export function updateEntryEdit(
 export async function confirmDelivery() {
   const adjustments: service.BalanceAdjustment[] = [];
   for (const [key, edit] of entryEdits) {
-    if (edit.credit > 0) {
+    if (edit.charged > 0 || edit.credit > 0) {
       const [clientId, productId] = key.split("-").map(Number);
       adjustments.push(
         new service.BalanceAdjustment({
           client_id: clientId,
           product_id: productId,
           delta: -edit.credit,
+          charged_units: edit.charged,
         }),
       );
     }
