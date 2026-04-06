@@ -107,6 +107,39 @@ func (r *ClientProductRepository) AdjustBalanceTx(ctx context.Context, tx *sql.T
 	return nil
 }
 
+// BalanceExportRow holds joined data for the balances CSV export.
+type BalanceExportRow struct {
+	ClientName  string
+	ProductName string
+	Balance     int
+}
+
+// GetAllBalances returns all active client-product balances joined with client and product names.
+func (r *ClientProductRepository) GetAllBalances(ctx context.Context) ([]BalanceExportRow, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT c.name, p.name, cp.balance
+		 FROM client_product cp
+		 JOIN client c ON c.id = cp.client_id
+		 JOIN product p ON p.id = cp.product_id
+		 WHERE c.unregister_date IS NULL
+		 ORDER BY c.name, p.name`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting all balances: %w", err)
+	}
+	defer rows.Close()
+
+	var results []BalanceExportRow
+	for rows.Next() {
+		var r BalanceExportRow
+		if err := rows.Scan(&r.ClientName, &r.ProductName, &r.Balance); err != nil {
+			return nil, fmt.Errorf("scanning balance export row: %w", err)
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
 // GetNegativeBalancesByZone returns clients with negative balances in a zone,
 // joined with client and product details for delivery sheet building.
 func (r *ClientProductRepository) GetNegativeBalancesByZone(ctx context.Context, zoneID int) ([]NegativeBalanceRow, error) {

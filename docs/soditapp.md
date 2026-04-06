@@ -192,13 +192,96 @@ credit_units    INTEGER
 
 **Task dependencies:** Tasks 1–3 are independent. Task 4 depends on all three.
 
-### MVP 3 — Data Management
-- CSV import/export (clients, zones, delivery history)
-- Bulk zone reassignment (move clients between zones)
-- Search and filtering across clients/deliveries
+### MVP 3 — Data Management ✅
 
-### MVP 4 — Quality of Life
-- Dashboard with weekly summaries
-- Clients with highest outstanding balances
-- Delivery history per client
-- Zone-level reports
+> Backend changes for export (file I/O via Wails runtime dialogs), import (CSV parsing + validation), and bulk reassignment (transaction wrapping existing repo). Search/filtering is frontend-only.
+
+#### Task 1 — Backend: Export Service ✅
+- New `backend/service/export_service.go` with `ExportService` struct bound in `app.go`
+- Three methods, each opens a Wails `runtime.SaveFileDialog`, writes the CSV, returns error on cancel or failure:
+  - `ExportZones()` → columns: `id, nombre`
+  - `ExportClients()` → columns: `id, nombre, direccion, zona`
+  - `ExportBalances()` → columns: `cliente, producto, saldo` (query joins `client_product` → `client` → `product`)
+- Reuse existing repo `GetAll` methods; add a join query for balances to `ClientProductRepository`
+- **Files:** `backend/service/export_service.go` (new), `backend/repository/client_product_repository.go`, `app.go`
+
+#### Task 2 — Backend: Import Service ✅
+- New `backend/service/import_service.go` with `ImportService` struct bound in `app.go`
+- Single method `ImportClients()`:
+  - Opens `runtime.OpenFileDialog` (filter `*.csv`)
+  - Parses rows: `nombre` (required), `direccion` (optional), `zona` (must match an existing zone name)
+  - Inserts valid rows, skips duplicates by name+zone, collects per-row errors
+  - Returns `ImportResult { Inserted, Skipped, Errors []string }`
+- **Files:** `backend/service/import_service.go` (new), `app.go`
+
+#### Task 3 — Backend: Bulk Zone Reassignment ✅
+- Add `BulkUpdateZone(ctx, clientIDs []int, targetZoneID int) error` to `ClientRepository` — single `UPDATE … WHERE id = ANY($1)` inside a transaction
+- Add `MoveClientsToZone(clientIDs []int, targetZoneID int) error` to `ClientService` delegating to the new repo method
+- **Files:** `backend/repository/client_repository.go`, `backend/service/client_service.go`
+
+#### Task 4 — Frontend: Export Buttons ✅
+- "Exportar" button on `ZonesPage.svelte` → calls `ExportZones()`
+- "Exportar" button on `ClientsPage.svelte` → calls `ExportClients()` and `ExportBalances()` (two buttons or a dropdown)
+- Show a sonner toast on success or error
+- **Files:** `ZonesPage.svelte`, `ClientsPage.svelte`
+
+#### Task 5 — Frontend: Import Dialog ✅
+- New `ImportClientsDialog.svelte` — triggered by an "Importar Clientes" button in `ClientsPage.svelte`
+- Calls `ImportClients()`, displays result summary (insertados / omitidos / errores) in the dialog
+- On success, refreshes the client list
+- **Files:** `frontend/src/components/clients/ImportClientsDialog.svelte` (new), `ClientsPage.svelte`
+
+#### Task 6 — Frontend: Bulk Zone Reassignment UI ✅
+- New `ZoneReassignDialog.svelte` triggered from `ZonesPage.svelte`
+- Step 1: select source zone and target zone from dropdowns
+- Step 2: checklist of active clients in the source zone (all pre-checked)
+- Confirm calls `MoveClientsToZone`, refreshes zones and clients stores
+- **Files:** `frontend/src/components/zones/ZoneReassignDialog.svelte` (new), `ZonesPage.svelte`
+
+#### Task 7 — Frontend: Search & Text Filtering ✅
+- Text search input on `ClientsPage.svelte` — client-side filter by name or address (case-insensitive, applied after zone filter)
+- Text search input on `ZonesPage.svelte` — filter zone list by name
+- No backend changes needed (data sets are small enough for client-side filtering)
+- **Files:** `ClientsPage.svelte`, `ZonesPage.svelte`
+
+**Task dependencies:** Tasks 1–3 are independent backend tasks. Task 4 depends on Task 1. Task 5 depends on Task 2. Task 6 depends on Task 3. Task 7 is independent.
+
+### MVP 4 — Reporting
+
+> Requires a new `delivery_transaction` table persisted on every `ConfirmDelivery` call. Tasks 1–3 are backend; Tasks 4–5 are frontend. Task 1 → Task 2 → Task 3 → Tasks 4 & 5.
+
+#### Task 1 — Backend: Delivery Transaction Table & Repository
+- Migration: `delivery_transaction` (id, client_id FK → Client, product_id FK → Product, charged_units INTEGER, credit_units INTEGER, delivery_date DATE DEFAULT CURRENT_DATE)
+- Model: `DeliveryTransaction` struct in `backend/model/`
+- Repository: `backend/repository/delivery_transaction_repository.go`
+  - `InsertTx(ctx, tx, clientID, productID, chargedUnits, creditUnits)` — called inside ConfirmDelivery DB transaction
+  - `GetByClient(ctx, clientID, startDate, endDate string)` → `[]DeliveryTransactionRow`
+  - `GetByZone(ctx, zoneID, startDate, endDate string)` → `[]DeliveryTransactionRow` (JOINs client to filter by zone)
+- **Files:** `db/migrations/005_delivery_transaction.sql` (new), `backend/model/delivery_transaction.go` (new), `backend/repository/delivery_transaction_repository.go` (new)
+
+#### Task 2 — Backend: Record Transactions on Delivery Confirm
+- Inject `DeliveryTransactionRepository` into `ClientProductService`
+- Extend `ConfirmDelivery` to call `InsertTx` within the existing DB transaction for each non-zero adjustment
+- **Files:** `backend/service/client_product_service.go`, `app.go`
+
+#### Task 3 — Backend: Report Service & DTOs
+- New `backend/dto/report.go`:
+  - `DeliveryHistoryEntryDTO` (clientID, clientName, productID, productName, chargedUnits, creditUnits, deliveryDate)
+  - `ZoneReportEntryDTO` (same fields)
+- New `backend/service/report_service.go` with `ReportService` bound in `app.go`:
+  - `GetClientHistory(clientID int, startDate, endDate string) ([]DeliveryHistoryEntryDTO, error)`
+  - `GetZoneReport(zoneID int, startDate, endDate string) ([]ZoneReportEntryDTO, error)`
+- **Files:** `backend/dto/report.go` (new), `backend/service/report_service.go` (new), `app.go`
+
+#### Task 4 — Frontend: Client Delivery History Dialog
+- New `DeliveryHistoryDialog.svelte` — props: `clientId`, `clientName`, `open` ($bindable)
+- On open: start/end date inputs (default last 30 days) + "Buscar" button → calls `GetClientHistory`
+- Table columns: Fecha | Producto | Cobrado | Fiado
+- Triggered by "Ver Historial" button added to `ClientsPage.svelte`
+- **Files:** `frontend/src/components/clients/DeliveryHistoryDialog.svelte` (new), `frontend/src/components/clients/ClientsPage.svelte`
+
+#### Task 5 — Frontend: Zone Reports Page
+- New `ZoneReportsPage.svelte` — zone selector + start/end date inputs + "Buscar" button
+- Table: Fecha | Cliente | Producto | Cobrado | Fiado, sorted by date then client
+- Add "Reportes" nav entry in `AppShell.svelte`; wire page in `App.svelte`
+- **Files:** `frontend/src/components/zones/ZoneReportsPage.svelte` (new), `frontend/src/components/AppShell.svelte`, `frontend/src/App.svelte`

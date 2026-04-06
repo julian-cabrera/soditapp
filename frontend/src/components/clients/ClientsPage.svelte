@@ -1,10 +1,13 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
-  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Coins01Icon } from "@hugeicons/core-free-icons";
+  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Coins01Icon, Download01Icon } from "@hugeicons/core-free-icons";
   import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
+  import { toast } from "svelte-sonner";
+  import { ExportClients, ExportBalances } from "wailsjs/go/service/ExportService";
   import {
     getClients,
     getClientsLoading,
@@ -15,19 +18,48 @@
   import ClientFormDialog from "./ClientFormDialog.svelte";
   import ClientUnregisterDialog from "./ClientUnregisterDialog.svelte";
   import ClientBalancesDialog from "./ClientBalancesDialog.svelte";
+  import ImportClientsDialog from "./ImportClientsDialog.svelte";
   import type { model } from "wailsjs/go/models";
+
+  async function exportClients() {
+    try {
+      await ExportClients();
+      toast.success("Clientes exportados correctamente");
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
+
+  async function exportBalances() {
+    try {
+      await ExportBalances();
+      toast.success("Saldos exportados correctamente");
+    } catch (e) {
+      toast.error(String(e));
+    }
+  }
 
   let formOpen = $state(false);
   let unregisterOpen = $state(false);
   let balancesOpen = $state(false);
+  let importOpen = $state(false);
   let selectedClient = $state<model.Client | undefined>(undefined);
   let balancesClient = $state<model.Client | undefined>(undefined);
   let selectedZoneId = $state<string | undefined>(undefined);
+  let searchQuery = $state("");
 
   let clients = $derived(getClients());
   let zones = $derived(getZones());
   let loading = $derived(getClientsLoading());
   let zoneMap = $derived(new Map(zones.map((z) => [z.id, z.name])));
+  let filteredClients = $derived(
+    searchQuery
+      ? clients.filter((c) => {
+          const q = searchQuery.toLowerCase();
+          return c.name.toLowerCase().includes(q) || (c.address ?? "").toLowerCase().includes(q);
+        })
+      : clients
+  );
 
   $effect(() => {
     fetchZones();
@@ -66,13 +98,27 @@
 <div class="space-y-4">
   <div class="flex items-center justify-between">
     <h2 class="text-lg font-semibold">Clientes</h2>
-    <Button size="default" onclick={openCreate}>
-      <HugeiconsIcon icon={PlusSignIcon} size={14} />
-      Nuevo Cliente
-    </Button>
+    <div class="flex gap-2">
+      <Button variant="outline" size="default" onclick={exportClients}>
+        <HugeiconsIcon icon={Download01Icon} size={14} />
+        Exportar Clientes
+      </Button>
+      <Button variant="outline" size="default" onclick={exportBalances}>
+        <HugeiconsIcon icon={Download01Icon} size={14} />
+        Exportar Saldos
+      </Button>
+      <Button variant="outline" size="default" onclick={() => (importOpen = true)}>
+        Importar Clientes
+      </Button>
+      <Button size="default" onclick={openCreate}>
+        <HugeiconsIcon icon={PlusSignIcon} size={14} />
+        Nuevo Cliente
+      </Button>
+    </div>
   </div>
 
   <div class="flex items-center gap-2">
+    <Input placeholder="Buscar por nombre o dirección..." bind:value={searchQuery} class="max-w-xs" />
     <span class="text-sm text-muted-foreground">Filtrar por zona:</span>
     <Select.Root type="single" bind:value={selectedZoneId}>
       <Select.Trigger class="w-48">
@@ -93,7 +139,7 @@
 
   {#if loading && clients.length === 0}
     <p class="text-sm text-muted-foreground">Cargando...</p>
-  {:else if clients.length === 0}
+  {:else if filteredClients.length === 0}
     <p class="text-sm text-muted-foreground">No hay clientes registrados.</p>
   {:else}
     <Table.Root>
@@ -106,7 +152,7 @@
         </Table.Row>
       </Table.Header>
       <Table.Body>
-        {#each clients as client (client.id)}
+        {#each filteredClients as client (client.id)}
           <Table.Row>
             <Table.Cell>{client.name}</Table.Cell>
             <Table.Cell class="text-muted-foreground">{client.address || "—"}</Table.Cell>
@@ -142,3 +188,5 @@
 {#if balancesClient}
   <ClientBalancesDialog bind:open={balancesOpen} client={balancesClient} />
 {/if}
+
+<ImportClientsDialog bind:open={importOpen} />
