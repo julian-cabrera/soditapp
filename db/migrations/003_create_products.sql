@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS product (
+    id      SERIAL PRIMARY KEY,
+    name    VARCHAR NOT NULL,
+    type    VARCHAR NOT NULL,
+    active  BOOLEAN NOT NULL DEFAULT TRUE
+);

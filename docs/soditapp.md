@@ -124,42 +124,73 @@ credit_units    INTEGER
 
 ### MVP 1 — Core Data & Delivery Entry
 
-#### Task 1 — Project Setup
+#### Task 1 — Project Setup ✅
 - Initialize Wails project (Go backend + Svelte 5 frontend)
 - Configure PostgreSQL connection (connection string, env config)
 - Set up folder structure: `backend/`, `frontend/`, `db/migrations/`
 - Verify dev and build pipeline runs clean
 
-#### Task 2 — Backend: Database & Entities
+#### Task 2 — Backend: Database & Entities ✅
 - Write SQL migrations for: `Zone`, `Client`, `Product`, `ClientProduct`
 - Implement repository layer with CRUD for each entity
 - Implement `DeliverySheetDTO` / `DeliveryEntryDTO` builder (queries `ClientProduct` for negative balances, paginates by page)
 
-#### Task 3 — Backend: Services & Wails Bindings
+#### Task 3 — Backend: Services & Wails Bindings ✅
 - Zone service (create, list, update, delete)
 - Client service (create, list by zone, update, unregister)
 - Product service (create, list active, toggle active)
 - ClientProduct service (ensure record exists, adjust balance on delivery confirm/edit/delete)
 - Expose all services as Wails-bound methods callable from the frontend
 
-#### Task 4 — Frontend: Zones & Clients
+#### Task 4 — Frontend: Zones & Clients ✅
 - Zones list screen — create, rename, delete
 - Clients list screen (filterable by zone) — create, edit, unregister
 - Assign/reassign client to zone
 
-#### Task 5 — Frontend: Products & Balances
+#### Task 5 — Frontend: Products & Balances ✅
 - Products list screen — create, rename, toggle active
 - ClientProduct balance view per client (read-only, shows current balance per product)
 
-#### Task 6 — Frontend: Delivery Entry
+#### Task 6 — Frontend: Delivery Entry ✅
 - Select zone → view clients with negative balance
 - Input charged/credit units per client per product
 - On confirm: call ClientProduct service to update balances
 
 ### MVP 2 — Printing & Sheet Preview
-- Delivery Sheet preview (matching the table format above)
-- Print to A4
-- Week selector / date filtering
+
+> All tasks are frontend-only. The backend `GetDeliverySheets(zoneID)` already provides all needed data.
+> Print strategy: `window.print()` + `@media print` CSS (Wails v2 has no dedicated print API).
+
+#### Task 1 — Week Selector Component
+- New `WeekSelector.svelte` in `frontend/src/components/delivery/`
+- Single date input → derives Monday–Sunday range automatically
+- Add `weekStart`/`weekEnd` state to `delivery.svelte.ts`; default to current week
+- Label in Spanish: "Semana del {start} al {end}" — cosmetic only, does not filter backend data
+- **Files:** `WeekSelector.svelte` (new), `delivery.svelte.ts`, `DeliveryPage.svelte`
+
+#### Task 2 — Delivery Sheet Preview Component
+- New `DeliverySheetPreview.svelte` in `frontend/src/components/delivery/`
+- Props: `DeliverySheetDTO[]` + week label
+- Per sheet: header (Zona, Semana, Página) + table matching the documented 4-day-column format
+- 4 generic "Día" columns, each with Cob/Fiado sub-columns — cells left empty for handwriting
+- Entries grouped by client: name + balance on row 1, address on row 2
+- Plain HTML `<table>` (not shadcn Table) for precise print control; purely presentational
+- **Files:** `DeliverySheetPreview.svelte` (new)
+
+#### Task 3 — Print Stylesheet & Print Button
+- Add `@page { size: A4; margin: 10mm; }` and `@media print` rules in `app.css`
+- Hide app shell (nav, controls) in print media; `page-break-after: always` between sheets
+- "Imprimir" button calls `window.print()`; add `print:hidden` to `AppShell.svelte` nav
+- **Files:** `app.css`, `DeliveryPage.svelte`, `DeliverySheetPreview.svelte`, `AppShell.svelte`
+
+#### Task 4 — Integration: Wire Preview into Delivery Page
+- "Ver Hoja" button toggles from entry form → preview mode (week selector + sheet preview + print button)
+- "Volver" returns to entry form preserving all edits and state
+- Extract `groupedEntries` logic to shared utility reused by both entry form and preview
+- Add `previewMode` state to `delivery.svelte.ts`
+- **Files:** `DeliveryPage.svelte`, `delivery.svelte.ts`
+
+**Task dependencies:** Tasks 1–3 are independent. Task 4 depends on all three.
 
 ### MVP 3 — Data Management
 - CSV import/export (clients, zones, delivery history)

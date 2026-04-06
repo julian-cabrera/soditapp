@@ -19,8 +19,10 @@
     "baseUrl": ".",
     "paths": {
       "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"]
+      "$lib/*": ["./src/lib/*"],
+      "wailsjs/*": ["./wailsjs/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
+  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "wailsjs/**/*.ts", "wailsjs/**/*.d.ts"],
+  "exclude": ["wailsjs/**/*.js"]
 }
