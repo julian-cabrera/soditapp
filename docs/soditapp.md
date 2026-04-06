@@ -161,14 +161,14 @@ credit_units    INTEGER
 > All tasks are frontend-only. The backend `GetDeliverySheets(zoneID)` already provides all needed data.
 > Print strategy: `window.print()` + `@media print` CSS (Wails v2 has no dedicated print API).
 
-#### Task 1 — Week Selector Component
+#### Task 1 — Week Selector Component ✅
 - New `WeekSelector.svelte` in `frontend/src/components/delivery/`
 - Single date input → derives Monday–Sunday range automatically
 - Add `weekStart`/`weekEnd` state to `delivery.svelte.ts`; default to current week
 - Label in Spanish: "Semana del {start} al {end}" — cosmetic only, does not filter backend data
 - **Files:** `WeekSelector.svelte` (new), `delivery.svelte.ts`, `DeliveryPage.svelte`
 
-#### Task 2 — Delivery Sheet Preview Component
+#### Task 2 — Delivery Sheet Preview Component ✅
 - New `DeliverySheetPreview.svelte` in `frontend/src/components/delivery/`
 - Props: `DeliverySheetDTO[]` + week label
 - Per sheet: header (Zona, Semana, Página) + table matching the documented 4-day-column format
@@ -177,13 +177,13 @@ credit_units    INTEGER
 - Plain HTML `<table>` (not shadcn Table) for precise print control; purely presentational
 - **Files:** `DeliverySheetPreview.svelte` (new)
 
-#### Task 3 — Print Stylesheet & Print Button
+#### Task 3 — Print Stylesheet & Print Button ✅
 - Add `@page { size: A4; margin: 10mm; }` and `@media print` rules in `app.css`
 - Hide app shell (nav, controls) in print media; `page-break-after: always` between sheets
 - "Imprimir" button calls `window.print()`; add `print:hidden` to `AppShell.svelte` nav
 - **Files:** `app.css`, `DeliveryPage.svelte`, `DeliverySheetPreview.svelte`, `AppShell.svelte`
 
-#### Task 4 — Integration: Wire Preview into Delivery Page
+#### Task 4 — Integration: Wire Preview into Delivery Page ✅
 - "Ver Hoja" button toggles from entry form → preview mode (week selector + sheet preview + print button)
 - "Volver" returns to entry form preserving all edits and state
 - Extract `groupedEntries` logic to shared utility reused by both entry form and preview
