@@ -24,6 +24,8 @@ type App struct {
 	ClientSvc        *service.ClientService
 	ProductSvc       *service.ProductService
 	ClientProductSvc *service.ClientProductService
+	ExportSvc        *service.ExportService
+	ImportSvc        *service.ImportService
 }
 
 // NewApp creates a new App application struct.
@@ -36,6 +38,8 @@ func NewApp(migrationsFS, seedsFS fs.FS) *App {
 		ClientSvc:        &service.ClientService{},
 		ProductSvc:       &service.ProductService{},
 		ClientProductSvc: &service.ClientProductService{},
+		ExportSvc:        &service.ExportService{},
+		ImportSvc:        &service.ImportService{},
 	}
 }
 
@@ -77,6 +81,8 @@ func (a *App) startup(ctx context.Context) {
 	a.ClientSvc.Init(ctx, clientRepo)
 	a.ProductSvc.Init(ctx, productRepo)
 	a.ClientProductSvc.Init(ctx, db, clientProductRepo, zoneRepo)
+	a.ExportSvc.Init(ctx, zoneRepo, clientRepo, clientProductRepo)
+	a.ImportSvc.Init(ctx, clientRepo, zoneRepo)
 }
 
 // shutdown is called when the app is closing

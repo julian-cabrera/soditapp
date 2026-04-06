@@ -236,6 +236,22 @@ export namespace service {
 	        this.delta = source["delta"];
 	    }
 	}
+	export class ImportResult {
+	    inserted: number;
+	    skipped: number;
+	    errors: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.inserted = source["inserted"];
+	        this.skipped = source["skipped"];
+	        this.errors = source["errors"];
+	    }
+	}
 
 }
 

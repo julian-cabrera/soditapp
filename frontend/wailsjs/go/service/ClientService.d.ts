@@ -12,6 +12,8 @@ export function ListClients():Promise<Array<model.Client>>;
 
 export function ListClientsByZone(arg1:number):Promise<Array<model.Client>>;
 
+export function MoveClientsToZone(arg1:Array<number>,arg2:number):Promise<void>;
+
 export function UnregisterClient(arg1:number):Promise<void>;
 
 export function UpdateClient(arg1:number,arg2:string,arg3:string,arg4:number):Promise<void>;

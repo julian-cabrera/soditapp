@@ -137,6 +137,50 @@ func (r *ClientRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+// BulkUpdateZone moves a set of clients to a new zone in a single transaction.
+func (r *ClientRepository) BulkUpdateZone(ctx context.Context, clientIDs []int, targetZoneID int) error {
+	if len(clientIDs) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning bulk update zone tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Build: UPDATE client SET zone_id = $1 WHERE id IN ($2, $3, ...)
+	placeholders := make([]string, len(clientIDs))
+	args := make([]interface{}, len(clientIDs)+1)
+	args[0] = targetZoneID
+	for i, id := range clientIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = id
+	}
+	query := fmt.Sprintf(
+		"UPDATE client SET zone_id = $1 WHERE id IN (%s)",
+		joinStrings(placeholders, ", "),
+	)
+
+	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("bulk updating zone: %w", err)
+	}
+
+	return tx.Commit()
+}
+
+// joinStrings joins a slice of strings with a separator.
+func joinStrings(parts []string, sep string) string {
+	result := ""
+	for i, p := range parts {
+		if i > 0 {
+			result += sep
+		}
+		result += p
+	}
+	return result
+}
+
 // scanClients reads client rows and handles nullable columns.
 func scanClients(rows *sql.Rows) ([]model.Client, error) {
 	var clients []model.Client

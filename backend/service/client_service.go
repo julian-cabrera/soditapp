@@ -50,3 +50,13 @@ func (s *ClientService) UpdateClient(id int, name, address string, zoneID int) e
 func (s *ClientService) UnregisterClient(id int) error {
 	return s.repo.Unregister(s.ctx, id)
 }
+
+func (s *ClientService) MoveClientsToZone(clientIDs []int, targetZoneID int) error {
+	if len(clientIDs) == 0 {
+		return fmt.Errorf("no clients selected")
+	}
+	if targetZoneID <= 0 {
+		return fmt.Errorf("invalid target zone")
+	}
+	return s.repo.BulkUpdateZone(s.ctx, clientIDs, targetZoneID)
+}
