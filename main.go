@@ -11,9 +11,12 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed db/migrations/*.sql
+var migrationsFS embed.FS
+
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	app := NewApp(migrationsFS)
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -25,8 +28,12 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        app.startup,
+		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
-			app,
+			app.ZoneSvc,
+			app.ClientSvc,
+			app.ProductSvc,
+			app.ClientProductSvc,
 		},
 	})
 

@@ -1,7 +1,7 @@
 <script lang="ts">
- import { Button } from "$lib/components/ui/button/index.js";
+  import { Toaster } from "$lib/components/ui/sonner/index.js";
+  import AppShell from "./components/AppShell.svelte";
 </script>
- 
-<h1 class="text-2xl font-bold">Hello world!</h1>
-<h2 class="text-lg font-semibold">Welcome to SvelteKit + Wails</h2>
-<Button>Click me</Button>
+
+<Toaster position="bottom-right" richColors />
+<AppShell />
