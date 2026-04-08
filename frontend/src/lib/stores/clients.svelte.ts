@@ -30,7 +30,7 @@ export async function fetchClients() {
 export async function fetchClientsByZone(zoneId: number) {
   loading = true;
   try {
-    clients = await ListClientsByZone(zoneId);
+    clients = (await ListClientsByZone(zoneId)) ?? [];
   } finally {
     loading = false;
   }

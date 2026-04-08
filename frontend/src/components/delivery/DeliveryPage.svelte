@@ -22,8 +22,7 @@
     getPreviewMode,
     setPreviewMode,
     groupEntriesByClient,
-    getWeekStart,
-    getWeekEnd,
+    getSelectedDate,
   } from "$lib/stores/delivery.svelte.js";
   import DeliveryConfirmDialog from "./DeliveryConfirmDialog.svelte";
   import DeliverySheetPreview from "./DeliverySheetPreview.svelte";
@@ -40,12 +39,9 @@
   let entryEdits = $derived(getEntryEdits());
   let currentSheet = $derived(sheets[currentPageIndex] as dto.DeliverySheetDTO | undefined);
   let previewMode = $derived(getPreviewMode());
-  let weekStart = $derived(getWeekStart());
-  let weekEnd = $derived(getWeekEnd());
+  let selectedDate = $derived(getSelectedDate());
 
-  let weekLabel = $derived(
-    `Semana del ${formatDate(weekStart)} al ${formatDate(weekEnd)}`,
-  );
+  let dateLabel = $derived(formatDate(selectedDate));
 
   let adjustmentCount = $derived(() => {
     let count = 0;
@@ -95,7 +91,7 @@
     </div>
     <DeliverySheetPreview
       {sheets}
-      {weekLabel}
+      dateLabel={dateLabel}
       onBack={() => setPreviewMode(false)}
     />
   </div>
@@ -125,13 +121,13 @@
 
     {#if !selectedZoneId}
       <p class="text-sm text-muted-foreground">
-        Seleccioná una zona para ver los clientes con saldo pendiente.
+        Seleccioná una zona para ver los clientes.
       </p>
     {:else if loading && sheets.length === 0}
       <p class="text-sm text-muted-foreground">Cargando...</p>
     {:else if sheets.length === 0}
       <p class="text-sm text-muted-foreground">
-        No hay clientes con saldo pendiente en esta zona.
+        No hay clientes registrados en esta zona.
       </p>
     {:else}
       {#if sheets.length > 1}

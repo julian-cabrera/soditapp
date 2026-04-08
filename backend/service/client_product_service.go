@@ -91,9 +91,9 @@ func (s *ClientProductService) GetDeliverySheets(zoneID int) ([]dto.DeliveryShee
 		return nil, fmt.Errorf("fetching zone %d: %w", zoneID, err)
 	}
 
-	rows, err := s.repo.GetNegativeBalancesByZone(s.ctx, zoneID)
+	rows, err := s.repo.GetAllByZone(s.ctx, zoneID)
 	if err != nil {
-		return nil, fmt.Errorf("fetching negative balances for zone %d: %w", zoneID, err)
+		return nil, fmt.Errorf("fetching clients for zone %d: %w", zoneID, err)
 	}
 
 	return dto.BuildDeliverySheets(zone.ID, zone.Name, rows, dto.DefaultEntriesPerPage), nil

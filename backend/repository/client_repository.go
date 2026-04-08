@@ -183,7 +183,7 @@ func joinStrings(parts []string, sep string) string {
 
 // scanClients reads client rows and handles nullable columns.
 func scanClients(rows *sql.Rows) ([]model.Client, error) {
-	var clients []model.Client
+	clients := make([]model.Client, 0)
 	for rows.Next() {
 		var c model.Client
 		var addr sql.NullString

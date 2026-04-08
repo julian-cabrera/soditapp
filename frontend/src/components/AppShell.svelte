@@ -1,14 +1,15 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
-  import { MapsLocation01Icon, UserMultipleIcon, Package01Icon, DeliveryTruck01Icon, Analytics01Icon } from "@hugeicons/core-free-icons";
+  import { MapsLocation01Icon, UserMultipleIcon, Package01Icon, DeliveryTruck01Icon, Analytics01Icon, ArrowMoveUpLeftIcon } from "@hugeicons/core-free-icons";
   import { cn } from "$lib/utils.js";
   import ZonesPage from "./zones/ZonesPage.svelte";
   import ClientsPage from "./clients/ClientsPage.svelte";
   import ProductsPage from "./products/ProductsPage.svelte";
   import DeliveryPage from "./delivery/DeliveryPage.svelte";
   import ZoneReportsPage from "./zones/ZoneReportsPage.svelte";
+  import ZoneReassignPage from "./zones/ZoneReassignPage.svelte";
 
-  type Page = "zones" | "clients" | "products" | "delivery" | "reports";
+  type Page = "zones" | "clients" | "products" | "delivery" | "reports" | "reassign";
   let currentPage = $state<Page>("zones");
 
   const navItems: { page: Page; label: string; icon: typeof MapsLocation01Icon }[] = [
@@ -17,6 +18,7 @@
     { page: "products", label: "Productos", icon: Package01Icon },
     { page: "delivery", label: "Entregas", icon: DeliveryTruck01Icon },
     { page: "reports", label: "Reportes", icon: Analytics01Icon },
+    { page: "reassign", label: "Reasignar", icon: ArrowMoveUpLeftIcon },
   ];
 </script>
 
@@ -50,6 +52,8 @@
       <DeliveryPage />
     {:else if currentPage === "reports"}
       <ZoneReportsPage />
+    {:else if currentPage === "reassign"}
+      <ZoneReassignPage />
     {/if}
   </main>
 </div>

@@ -9,7 +9,6 @@
   import { getZones, getZonesLoading, fetchZones } from "$lib/stores/zones.svelte.js";
   import ZoneFormDialog from "./ZoneFormDialog.svelte";
   import ZoneDeleteDialog from "./ZoneDeleteDialog.svelte";
-  import ZoneReassignDialog from "./ZoneReassignDialog.svelte";
   import type { model } from "wailsjs/go/models";
 
   async function exportZones() {
@@ -23,7 +22,6 @@
 
   let formOpen = $state(false);
   let deleteOpen = $state(false);
-  let reassignOpen = $state(false);
   let selectedZone = $state<model.Zone | undefined>(undefined);
   let searchQuery = $state("");
 
@@ -60,9 +58,6 @@
       <Button variant="outline" size="default" onclick={exportZones}>
         <HugeiconsIcon icon={Download01Icon} size={14} />
         Exportar
-      </Button>
-      <Button variant="outline" size="default" onclick={() => (reassignOpen = true)}>
-        Reasignar Clientes
       </Button>
       <Button size="default" onclick={openCreate}>
         <HugeiconsIcon icon={PlusSignIcon} size={14} />
@@ -111,5 +106,3 @@
 {#if selectedZone}
   <ZoneDeleteDialog bind:open={deleteOpen} zone={selectedZone} />
 {/if}
-
-<ZoneReassignDialog bind:open={reassignOpen} {zones} />

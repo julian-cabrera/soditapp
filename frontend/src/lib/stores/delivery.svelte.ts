@@ -42,23 +42,7 @@ let entryEdits = $state<Map<string, { charged: number; credit: number }>>(
   new Map(),
 );
 let selectedZoneId = $state<number | undefined>(undefined);
-
-function getInitialWeekRange(): { start: Date; end: Date } {
-  const d = new Date();
-  const day = d.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(d);
-  monday.setDate(d.getDate() + diffToMonday);
-  monday.setHours(0, 0, 0, 0);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(0, 0, 0, 0);
-  return { start: monday, end: sunday };
-}
-
-const initialWeek = getInitialWeekRange();
-let weekStart = $state<Date>(initialWeek.start);
-let weekEnd = $state<Date>(initialWeek.end);
+let selectedDate = $state<Date>(new Date());
 
 export function getSheets() {
   return sheets;
@@ -80,12 +64,12 @@ export function getSelectedZoneId() {
   return selectedZoneId;
 }
 
-export function getWeekStart() {
-  return weekStart;
+export function getSelectedDate() {
+  return selectedDate;
 }
 
-export function getWeekEnd() {
-  return weekEnd;
+export function setSelectedDate(date: Date) {
+  selectedDate = date;
 }
 
 export function getPreviewMode() {
@@ -94,11 +78,6 @@ export function getPreviewMode() {
 
 export function setPreviewMode(value: boolean) {
   previewMode = value;
-}
-
-export function setWeekRange(start: Date, end: Date) {
-  weekStart = start;
-  weekEnd = end;
 }
 
 export async function fetchDeliverySheets(zoneId: number) {

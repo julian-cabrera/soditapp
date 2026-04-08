@@ -169,3 +169,32 @@ func (r *ClientProductRepository) GetNegativeBalancesByZone(ctx context.Context,
 	}
 	return results, rows.Err()
 }
+
+// GetAllByZone returns all active clients in a zone with their product balances,
+// joined with client and product details for delivery sheet building.
+func (r *ClientProductRepository) GetAllByZone(ctx context.Context, zoneID int) ([]NegativeBalanceRow, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT c.id, c.name, COALESCE(c.address, ''), cp.balance, p.id, p.name
+		 FROM client_product cp
+		 JOIN client c ON c.id = cp.client_id
+		 JOIN product p ON p.id = cp.product_id
+		 WHERE c.zone_id = $1
+		   AND c.unregister_date IS NULL
+		 ORDER BY c.name, p.name`,
+		zoneID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting negative balances for zone %d: %w", zoneID, err)
+	}
+	defer rows.Close()
+
+	var results []NegativeBalanceRow
+	for rows.Next() {
+		var r NegativeBalanceRow
+		if err := rows.Scan(&r.ClientID, &r.ClientName, &r.ClientAddress, &r.Balance, &r.ProductID, &r.ProductName); err != nil {
+			return nil, fmt.Errorf("scanning negative balance row: %w", err)
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}

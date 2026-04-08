@@ -145,10 +145,22 @@
     </Select.Root>
   </div>
 
-  {#if loading && clients.length === 0}
+  {#if loading}
     <p class="text-sm text-muted-foreground">Cargando...</p>
   {:else if filteredClients.length === 0}
-    <p class="text-sm text-muted-foreground">No hay clientes registrados.</p>
+    {#if selectedZoneId && selectedZoneId !== "all"}
+      <div class="flex flex-col items-start gap-2 rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+        <p>Esta zona no tiene clientes registrados.</p>
+        <button
+          class="text-foreground underline underline-offset-2 hover:text-primary"
+          onclick={() => (selectedZoneId = "all")}
+        >
+          Ver todos los clientes
+        </button>
+      </div>
+    {:else}
+      <p class="text-sm text-muted-foreground">No hay clientes registrados.</p>
+    {/if}
   {:else}
     <Table.Root>
       <Table.Header>
