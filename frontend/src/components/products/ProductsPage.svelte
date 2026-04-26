@@ -81,12 +81,12 @@
             </Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon-xs" onclick={() => openEdit(product)} title="Renombrar">
+                <Button variant="ghost" size="icon" onclick={() => openEdit(product)} title="Renombrar">
                   <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon-xs"
+                  size="icon"
                   onclick={() => handleToggle(product)}
                   title={product.active ? "Desactivar" : "Activar"}
                 >

@@ -1,4 +1,4 @@
 CREATE TABLE IF NOT EXISTS zone (
     id      SERIAL PRIMARY KEY,
-    name    VARCHAR NOT NULL
+    name    VARCHAR(100) NOT NULL
 );

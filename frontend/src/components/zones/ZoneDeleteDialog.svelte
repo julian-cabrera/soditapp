@@ -23,11 +23,12 @@
 </script>
 
 <AlertDialog.Root bind:open>
-  <AlertDialog.Content>
+  <AlertDialog.Content class="overflow-auto">
     <AlertDialog.Header>
       <AlertDialog.Title>Eliminar zona</AlertDialog.Title>
       <AlertDialog.Description>
         ¿Estás seguro de que deseas eliminar la zona <strong>{zone.name}</strong>?
+        <br />
         Esta acción no se puede deshacer.
       </AlertDialog.Description>
     </AlertDialog.Header>

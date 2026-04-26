@@ -83,13 +83,13 @@
       <Table.Body>
         {#each filteredZones as zone (zone.id)}
           <Table.Row>
-            <Table.Cell>{zone.name}</Table.Cell>
+            <Table.Cell><span class="text-pretty">{zone.name}</span></Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon-xs" onclick={() => openEdit(zone)}>
+                <Button title="Editar" variant="ghost" size="icon" onclick={() => openEdit(zone)}>
                   <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon-xs" onclick={() => openDelete(zone)}>
+                <Button title="Eliminar" variant="ghost" size="icon" onclick={() => openDelete(zone)}>
                   <HugeiconsIcon icon={Delete01Icon} size={14} />
                 </Button>
               </div>

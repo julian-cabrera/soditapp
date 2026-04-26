@@ -181,16 +181,16 @@
             </Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon-xs" onclick={() => openHistory(client)} title="Ver Historial">
+                <Button variant="ghost" size="icon" onclick={() => openHistory(client)} title="Ver Historial">
                   <HugeiconsIcon icon={TimeScheduleIcon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon-xs" onclick={() => openBalances(client)} title="Saldos">
+                <Button variant="ghost" size="icon" onclick={() => openBalances(client)} title="Saldos">
                   <HugeiconsIcon icon={Coins01Icon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon-xs" onclick={() => openEdit(client)} title="Editar">
+                <Button variant="ghost" size="icon" onclick={() => openEdit(client)} title="Editar">
                   <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon-xs" onclick={() => openUnregister(client)} title="Dar de baja">
+                <Button variant="ghost" size="icon" onclick={() => openUnregister(client)} title="Dar de baja">
                   <HugeiconsIcon icon={Delete01Icon} size={14} />
                 </Button>
               </div>
