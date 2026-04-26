@@ -12,7 +12,11 @@ export function ListClients():Promise<Array<model.Client>>;
 
 export function ListClientsByZone(arg1:number):Promise<Array<model.Client>>;
 
+export function ListInactiveClients():Promise<Array<model.Client>>;
+
 export function MoveClientsToZone(arg1:Array<number>,arg2:number):Promise<void>;
+
+export function RestoreClient(arg1:number):Promise<void>;
 
 export function UnregisterClient(arg1:number):Promise<void>;
 

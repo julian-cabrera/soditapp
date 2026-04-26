@@ -1,13 +1,23 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
-  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Coins01Icon, Download01Icon, TimeScheduleIcon } from "@hugeicons/core-free-icons";
+  import {
+    PencilEdit01Icon,
+    Delete01Icon,
+    PlusSignIcon,
+    Coins01Icon,
+    Download01Icon,
+    TimeScheduleIcon,
+  } from "@hugeicons/core-free-icons";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
   import { toast } from "svelte-sonner";
-  import { ExportClients, ExportBalances } from "wailsjs/go/service/ExportService";
+  import {
+    ExportClients,
+    ExportBalances,
+  } from "wailsjs/go/service/ExportService";
   import {
     getClients,
     getClientsLoading,
@@ -20,6 +30,8 @@
   import ClientBalancesDialog from "./ClientBalancesDialog.svelte";
   import ImportClientsDialog from "./ImportClientsDialog.svelte";
   import DeliveryHistoryDialog from "./DeliveryHistoryDialog.svelte";
+  import ClientActionDialog from "./ClientActionDialog.svelte";
+  import ClientRestoreDialog from "./ClientRestoreDialog.svelte";
   import type { model } from "wailsjs/go/models";
 
   async function exportClients() {
@@ -45,6 +57,8 @@
   let balancesOpen = $state(false);
   let importOpen = $state(false);
   let historyOpen = $state(false);
+  let actionOpen = $state(false);
+  let restoreOpen = $state(false);
   let selectedClient = $state<model.Client | undefined>(undefined);
   let balancesClient = $state<model.Client | undefined>(undefined);
   let historyClient = $state<model.Client | undefined>(undefined);
@@ -59,9 +73,12 @@
     searchQuery
       ? clients.filter((c) => {
           const q = searchQuery.toLowerCase();
-          return c.name.toLowerCase().includes(q) || (c.address ?? "").toLowerCase().includes(q);
+          return (
+            c.name.toLowerCase().includes(q) ||
+            (c.address ?? "").toLowerCase().includes(q)
+          );
         })
-      : clients
+      : clients,
   );
 
   $effect(() => {
@@ -78,8 +95,16 @@
   });
 
   function openCreate() {
+    actionOpen = true;
+  }
+
+  function handleAddNew() {
     selectedClient = undefined;
     formOpen = true;
+  }
+
+  function handleRestore() {
+    restoreOpen = true;
   }
 
   function openEdit(client: model.Client) {
@@ -115,7 +140,11 @@
         <HugeiconsIcon icon={Download01Icon} size={14} />
         Exportar Saldos
       </Button>
-      <Button variant="outline" size="default" onclick={() => (importOpen = true)}>
+      <Button
+        variant="outline"
+        size="default"
+        onclick={() => (importOpen = true)}
+      >
         Importar Clientes
       </Button>
       <Button size="default" onclick={openCreate}>
@@ -126,7 +155,11 @@
   </div>
 
   <div class="flex items-center gap-2">
-    <Input placeholder="Buscar por nombre o dirección..." bind:value={searchQuery} class="max-w-xs" />
+    <Input
+      placeholder="Buscar por nombre o dirección..."
+      bind:value={searchQuery}
+      class="max-w-xs"
+    />
     <span class="text-sm text-muted-foreground">Filtrar por zona:</span>
     <Select.Root type="single" bind:value={selectedZoneId}>
       <Select.Trigger class="w-48">
@@ -149,7 +182,9 @@
     <p class="text-sm text-muted-foreground">Cargando...</p>
   {:else if filteredClients.length === 0}
     {#if selectedZoneId && selectedZoneId !== "all"}
-      <div class="flex flex-col items-start gap-2 rounded-md border border-dashed p-6 text-sm text-muted-foreground">
+      <div
+        class="flex flex-col items-start gap-2 rounded-md border border-dashed p-6 text-sm text-muted-foreground"
+      >
         <p>Esta zona no tiene clientes registrados.</p>
         <button
           class="text-foreground underline underline-offset-2 hover:text-primary"
@@ -175,22 +210,46 @@
         {#each filteredClients as client (client.id)}
           <Table.Row>
             <Table.Cell>{client.name}</Table.Cell>
-            <Table.Cell class="text-muted-foreground">{client.address || "—"}</Table.Cell>
+            <Table.Cell class="text-muted-foreground"
+              >{client.address || "—"}</Table.Cell
+            >
             <Table.Cell>
-              <Badge variant="secondary">{zoneMap.get(client.zone_id) ?? "—"}</Badge>
+              <Badge variant="secondary"
+                >{zoneMap.get(client.zone_id) ?? "—"}</Badge
+              >
             </Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
-                <Button variant="ghost" size="icon" onclick={() => openHistory(client)} title="Ver Historial">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openHistory(client)}
+                  title="Ver Historial"
+                >
                   <HugeiconsIcon icon={TimeScheduleIcon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon" onclick={() => openBalances(client)} title="Saldos">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openBalances(client)}
+                  title="Saldos"
+                >
                   <HugeiconsIcon icon={Coins01Icon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon" onclick={() => openEdit(client)} title="Editar">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openEdit(client)}
+                  title="Editar"
+                >
                   <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
                 </Button>
-                <Button variant="ghost" size="icon" onclick={() => openUnregister(client)} title="Dar de baja">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openUnregister(client)}
+                  title="Dar de baja"
+                >
                   <HugeiconsIcon icon={Delete01Icon} size={14} />
                 </Button>
               </div>
@@ -204,6 +263,10 @@
 
 <ClientFormDialog bind:open={formOpen} client={selectedClient} {zones} />
 
+<ClientActionDialog bind:open={actionOpen} onAdd={handleAddNew} onRestore={handleRestore} />
+
+<ClientRestoreDialog bind:open={restoreOpen} />
+
 {#if selectedClient}
   <ClientUnregisterDialog bind:open={unregisterOpen} client={selectedClient} />
 {/if}
@@ -215,5 +278,9 @@
 <ImportClientsDialog bind:open={importOpen} />
 
 {#if historyClient}
-  <DeliveryHistoryDialog bind:open={historyOpen} clientId={historyClient.id} clientName={historyClient.name} />
+  <DeliveryHistoryDialog
+    bind:open={historyOpen}
+    clientId={historyClient.id}
+    clientName={historyClient.name}
+  />
 {/if}

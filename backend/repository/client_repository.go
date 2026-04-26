@@ -125,6 +125,34 @@ func (r *ClientRepository) Unregister(ctx context.Context, id int) error {
 	return nil
 }
 
+// GetInactive returns all inactive (unregistered) clients ordered by name.
+func (r *ClientRepository) GetInactive(ctx context.Context) ([]model.Client, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT id, name, address, zone_id, create_date, unregister_date
+		 FROM client
+		 WHERE unregister_date IS NOT NULL
+		 ORDER BY name`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing inactive clients: %w", err)
+	}
+	defer rows.Close()
+
+	return scanClients(rows)
+}
+
+// Restore reactivates a client by setting unregister_date to NULL.
+func (r *ClientRepository) Restore(ctx context.Context, id int) error {
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE client SET unregister_date = NULL WHERE id = $1",
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("restoring client %d: %w", id, err)
+	}
+	return nil
+}
+
 // Delete removes a client by its ID.
 func (r *ClientRepository) Delete(ctx context.Context, id int) error {
 	_, err := r.db.ExecContext(ctx,

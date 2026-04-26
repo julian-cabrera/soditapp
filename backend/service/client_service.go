@@ -51,6 +51,14 @@ func (s *ClientService) UnregisterClient(id int) error {
 	return s.repo.Unregister(s.ctx, id)
 }
 
+func (s *ClientService) ListInactiveClients() ([]model.Client, error) {
+	return s.repo.GetInactive(s.ctx)
+}
+
+func (s *ClientService) RestoreClient(id int) error {
+	return s.repo.Restore(s.ctx, id)
+}
+
 func (s *ClientService) MoveClientsToZone(clientIDs []int, targetZoneID int) error {
 	if len(clientIDs) == 0 {
 		return fmt.Errorf("no clients selected")
