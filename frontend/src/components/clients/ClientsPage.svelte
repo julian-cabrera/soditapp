@@ -263,7 +263,11 @@
 
 <ClientFormDialog bind:open={formOpen} client={selectedClient} {zones} />
 
-<ClientActionDialog bind:open={actionOpen} onAdd={handleAddNew} onRestore={handleRestore} />
+<ClientActionDialog
+  bind:open={actionOpen}
+  onAdd={handleAddNew}
+  onRestore={handleRestore}
+/>
 
 <ClientRestoreDialog bind:open={restoreOpen} />
 
