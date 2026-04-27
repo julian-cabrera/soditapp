@@ -43,19 +43,26 @@
     <Dialog.Header>
       <Dialog.Title>Importar Clientes</Dialog.Title>
       <Dialog.Description>
-        Seleccioná un archivo CSV con columnas: <code>nombre</code>, <code>direccion</code> (opcional), <code>zona</code>.
+        Seleccioná un archivo CSV con columnas: <code>nombre</code>,
+        <code>direccion</code>
+        (opcional), <code>zona</code>.
       </Dialog.Description>
     </Dialog.Header>
 
     <div class="space-y-4 py-2">
       {#if result}
         <div class="space-y-2 text-sm">
-          <p><span class="font-medium">{result.inserted}</span> clientes importados</p>
-          <p><span class="font-medium">{result.skipped}</span> omitidos (duplicados)</p>
+          <p>
+            <span class="font-medium">{result.inserted}</span> clientes importados/actualizados
+          </p>
           {#if result.errors.length > 0}
             <div>
-              <p class="font-medium text-destructive">{result.errors.length} errores:</p>
-              <ul class="mt-1 max-h-40 overflow-y-auto rounded border p-2 text-muted-foreground">
+              <p class="font-medium text-destructive">
+                {result.errors.length} errores:
+              </p>
+              <ul
+                class="mt-1 max-h-40 overflow-y-auto rounded border p-2 text-muted-foreground"
+              >
                 {#each result.errors as err}
                   <li>{err}</li>
                 {/each}

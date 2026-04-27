@@ -44,6 +44,38 @@ func (r *ClientRepository) Create(ctx context.Context, name, address string, zon
 	return c, nil
 }
 
+// Upsert inserts a new client or updates an existing one (by name).
+// If a client with the same name does not exist, it inserts a new one.
+// If a client with the same name exists, it updates the address and zone_id.
+func (r *ClientRepository) Upsert(ctx context.Context, name, address string, zoneID int) (model.Client, error) {
+	var c model.Client
+	var addr sql.NullString
+	var unregDate sql.NullTime
+
+	// Use PostgreSQL UPSERT syntax with ON CONFLICT DO UPDATE
+	err := r.db.QueryRowContext(ctx,
+		`INSERT INTO client (name, address, zone_id)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (name) DO UPDATE SET
+		   address = EXCLUDED.address,
+		   zone_id = EXCLUDED.zone_id
+		 RETURNING id, name, address, zone_id, create_date, unregister_date`,
+		name, address, zoneID,
+	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate)
+	if err != nil {
+		return c, fmt.Errorf("upserting client: %w", err)
+	}
+
+	if addr.Valid {
+		c.Address = addr.String
+	}
+	if unregDate.Valid {
+		c.UnregisterDate = &unregDate.Time
+	}
+
+	return c, nil
+}
+
 // GetByID returns a client by its ID.
 func (r *ClientRepository) GetByID(ctx context.Context, id int) (model.Client, error) {
 	var c model.Client

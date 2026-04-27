@@ -33,8 +33,10 @@ func (s *ImportService) Init(ctx context.Context, clientRepo *repository.ClientR
 	s.zoneRepo = zoneRepo
 }
 
-// ImportClients opens a file dialog, parses the CSV, and inserts valid clients.
+// ImportClients opens a file dialog, parses the CSV, and upserts clients.
 // Expected columns: nombre (required), direccion (optional), zona (must match existing zone name).
+// If a client name already exists, it will be updated with the new address and zone.
+// If a client name does not exist, a new client will be created.
 func (s *ImportService) ImportClients() (ImportResult, error) {
 	path, err := runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
 		Filters: []runtime.FileFilter{
@@ -62,17 +64,6 @@ func (s *ImportService) ImportClients() (ImportResult, error) {
 	zoneIDs := make(map[string]int, len(zones))
 	for _, z := range zones {
 		zoneIDs[strings.ToLower(z.Name)] = z.ID
-	}
-
-	// Build duplicate set: lowercase(name)|zoneID
-	existingClients, err := s.clientRepo.GetAll(s.ctx)
-	if err != nil {
-		return ImportResult{}, fmt.Errorf("fetching existing clients: %w", err)
-	}
-	duplicates := make(map[string]bool, len(existingClients))
-	for _, c := range existingClients {
-		key := fmt.Sprintf("%s|%d", strings.ToLower(c.Name), c.ZoneID)
-		duplicates[key] = true
 	}
 
 	reader := csv.NewReader(f)
@@ -126,23 +117,16 @@ func (s *ImportService) ImportClients() (ImportResult, error) {
 			continue
 		}
 
-		dupKey := fmt.Sprintf("%s|%d", strings.ToLower(nombre), zoneID)
-		if duplicates[dupKey] {
-			result.Skipped++
-			continue
-		}
-
 		direccion := ""
 		if hasDireccion && direccionIdx < len(row) {
 			direccion = strings.TrimSpace(row[direccionIdx])
 		}
 
-		if _, err := s.clientRepo.Create(s.ctx, nombre, direccion, zoneID); err != nil {
+		if _, err := s.clientRepo.Upsert(s.ctx, nombre, direccion, zoneID); err != nil {
 			result.Errors = append(result.Errors, fmt.Sprintf("fila %d: %s", rowNum, err.Error()))
 			continue
 		}
 
-		duplicates[dupKey] = true
 		result.Inserted++
 	}
 
