@@ -108,12 +108,11 @@ func (s *ExportService) ExportClients() error {
 	defer f.Close()
 
 	w := csv.NewWriter(f)
-	if err := w.Write([]string{"id", "nombre", "direccion", "zona"}); err != nil {
+	if err := w.Write([]string{"nombre", "direccion", "zona"}); err != nil {
 		return fmt.Errorf("writing header: %w", err)
 	}
 	for _, c := range clients {
 		if err := w.Write([]string{
-			strconv.Itoa(c.ID),
 			c.Name,
 			c.Address,
 			zoneNames[c.ZoneID],

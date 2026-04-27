@@ -4,6 +4,8 @@ import {
   ListClientsByZone,
   UpdateClient,
   UnregisterClient,
+  ListInactiveClients,
+  RestoreClient,
 } from "wailsjs/go/service/ClientService";
 import type { model } from "wailsjs/go/models";
 
@@ -69,6 +71,25 @@ export async function unregisterClient(id: number) {
   loading = true;
   try {
     await UnregisterClient(id);
+    await fetchClients();
+  } finally {
+    loading = false;
+  }
+}
+
+export async function listInactiveClients() {
+  try {
+    return await ListInactiveClients();
+  } catch (err) {
+    console.error("Error listing inactive clients:", err);
+    return [];
+  }
+}
+
+export async function restoreClient(id: number) {
+  loading = true;
+  try {
+    await RestoreClient(id);
     await fetchClients();
   } finally {
     loading = false;

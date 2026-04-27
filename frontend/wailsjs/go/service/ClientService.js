@@ -18,8 +18,16 @@ export function ListClientsByZone(arg1) {
   return window['go']['service']['ClientService']['ListClientsByZone'](arg1);
 }
 
+export function ListInactiveClients() {
+  return window['go']['service']['ClientService']['ListInactiveClients']();
+}
+
 export function MoveClientsToZone(arg1, arg2) {
   return window['go']['service']['ClientService']['MoveClientsToZone'](arg1, arg2);
+}
+
+export function RestoreClient(arg1) {
+  return window['go']['service']['ClientService']['RestoreClient'](arg1);
 }
 
 export function UnregisterClient(arg1) {
