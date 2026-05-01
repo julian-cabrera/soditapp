@@ -10,4 +10,5 @@ type Client struct {
 	ZoneID         int        `json:"zone_id"`
 	CreateDate     time.Time  `json:"create_date"`
 	UnregisterDate *time.Time `json:"unregister_date"`
+	PriorityOrder  int        `json:"priority_order"`
 }

@@ -127,6 +127,7 @@ export namespace model {
 	    create_date: any;
 	    // Go type: time
 	    unregister_date?: any;
+	    priority_order: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new Client(source);
@@ -140,6 +141,7 @@ export namespace model {
 	        this.zone_id = source["zone_id"];
 	        this.create_date = this.convertValues(source["create_date"], null);
 	        this.unregister_date = this.convertValues(source["unregister_date"], null);
+	        this.priority_order = source["priority_order"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
