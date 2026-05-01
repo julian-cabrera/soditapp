@@ -72,7 +72,7 @@
       <div class="space-y-2">
         <Label>Zona</Label>
         <Select.Root type="single" bind:value={zoneId}>
-          <Select.Trigger class="w-full">
+          <Select.Trigger class="w-105 truncate">
             {#if zoneId}
               {zoneMap.get(zoneId) ?? "Seleccionar zona"}
             {:else}

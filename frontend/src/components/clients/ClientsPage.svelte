@@ -162,7 +162,7 @@
     />
     <span class="text-sm text-muted-foreground">Filtrar por zona:</span>
     <Select.Root type="single" bind:value={selectedZoneId}>
-      <Select.Trigger class="w-48">
+      <Select.Trigger class="w-100 truncate">
         {#if selectedZoneId && selectedZoneId !== "all"}
           {zoneMap.get(Number(selectedZoneId)) ?? "Zona"}
         {:else}
@@ -205,7 +205,7 @@
           <Table.Head>Zona</Table.Head>
           <Table.Head class="w-40 text-right">Acciones</Table.Head>
         </Table.Row>
-      </Table.Header>
+        </Table.Header>
       <Table.Body>
         {#each filteredClients as client (client.id)}
           <Table.Row>
