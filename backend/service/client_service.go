@@ -68,3 +68,83 @@ func (s *ClientService) MoveClientsToZone(clientIDs []int, targetZoneID int) err
 	}
 	return s.repo.BulkUpdateZone(s.ctx, clientIDs, targetZoneID)
 }
+
+// ReorderClient moves a client between two neighbors within the same zone.
+// prevID or nextID can be 0 to indicate start or end.
+// It uses gap-based integer ordering and will trigger a reindex when gaps are exhausted.
+func (s *ClientService) ReorderClient(clientID int, prevID int, nextID int) error {
+	// Validate client exists and determine zone
+	client, err := s.repo.GetByID(s.ctx, clientID)
+	if err != nil {
+		return fmt.Errorf("getting client: %w", err)
+	}
+	zoneID := client.ZoneID
+
+	// Helper to get priority of a neighbor (0 if not present)
+	getPriority := func(id int) (int, error) {
+		if id == 0 {
+			return 0, nil
+		}
+		c, err := s.repo.GetByID(s.ctx, id)
+		if err != nil {
+			return 0, fmt.Errorf("getting neighbor %d: %w", id, err)
+		}
+		return c.PriorityOrder, nil
+	}
+
+	prevPrio, err := getPriority(prevID)
+	if err != nil {
+		return err
+	}
+	nextPrio, err := getPriority(nextID)
+	if err != nil {
+		return err
+	}
+
+	// Compute new priority
+	var newPriority int
+	if prevID == 0 && nextID == 0 {
+		// only client in zone
+		newPriority = repository.DefaultPriorityGap
+	} else if prevID == 0 {
+		// place at beginning
+		newPriority = nextPrio - repository.DefaultPriorityGap
+		if newPriority <= 0 {
+			// need reindex to make room
+			if err := s.repo.ReindexZone(s.ctx, zoneID, repository.DefaultPriorityGap); err != nil {
+				return fmt.Errorf("reindex failed: %w", err)
+			}
+			// recompute
+			nextPrio, _ = getPriority(nextID)
+			newPriority = nextPrio - repository.DefaultPriorityGap
+		}
+	} else if nextID == 0 {
+		// place at end
+		newPriority = prevPrio + repository.DefaultPriorityGap
+	} else {
+		// between two items
+		if nextPrio-prevPrio > 1 {
+			newPriority = (prevPrio + nextPrio) / 2
+		} else {
+			// collision, reindex and recompute
+			if err := s.repo.ReindexZone(s.ctx, zoneID, repository.DefaultPriorityGap); err != nil {
+				return fmt.Errorf("reindex failed: %w", err)
+			}
+			// re-fetch priorities
+			prevPrio, _ = getPriority(prevID)
+			nextPrio, _ = getPriority(nextID)
+			if nextPrio-prevPrio <= 1 {
+				// as a last resort, assign prev + 1
+				newPriority = prevPrio + 1
+			} else {
+				newPriority = (prevPrio + nextPrio) / 2
+			}
+		}
+	}
+
+	// Persist change
+	if err := s.repo.UpdatePriority(s.ctx, clientID, newPriority); err != nil {
+		return fmt.Errorf("updating priority: %w", err)
+	}
+	return nil
+}

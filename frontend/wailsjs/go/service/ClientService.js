@@ -26,6 +26,10 @@ export function MoveClientsToZone(arg1, arg2) {
   return window['go']['service']['ClientService']['MoveClientsToZone'](arg1, arg2);
 }
 
+export function ReorderClient(arg1, arg2, arg3) {
+  return window['go']['service']['ClientService']['ReorderClient'](arg1, arg2, arg3);
+}
+
 export function RestoreClient(arg1) {
   return window['go']['service']['ClientService']['RestoreClient'](arg1);
 }

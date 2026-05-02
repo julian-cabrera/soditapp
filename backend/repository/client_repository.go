@@ -18,18 +18,27 @@ func NewClientRepository(db *sql.DB) *ClientRepository {
 	return &ClientRepository{db: db}
 }
 
-// Create inserts a new client and returns it.
+const DefaultPriorityGap = 1024
+
+// Create inserts a new client and returns it. New clients are appended to the end
+// of their zone's ordering using a gap-based priority (max + defaultPriorityGap).
 func (r *ClientRepository) Create(ctx context.Context, name, address string, zoneID int) (model.Client, error) {
 	var c model.Client
 	var addr sql.NullString
 	var unregDate sql.NullTime
 
-	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO client (name, address, zone_id)
-		 VALUES ($1, $2, $3)
-		 RETURNING id, name, address, zone_id, create_date, unregister_date`,
-		name, address, zoneID,
-	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate)
+	max, err := r.MaxPriorityInZone(ctx, zoneID)
+	if err != nil {
+		return c, fmt.Errorf("getting max priority: %w", err)
+	}
+	newPriority := max + DefaultPriorityGap
+
+	err = r.db.QueryRowContext(ctx,
+		`INSERT INTO client (name, address, zone_id, priority_order)
+		 VALUES ($1, $2, $3, $4)
+		 RETURNING id, name, address, zone_id, create_date, unregister_date, priority_order`,
+		name, address, zoneID, newPriority,
+	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate, &c.PriorityOrder)
 	if err != nil {
 		return c, fmt.Errorf("creating client: %w", err)
 	}
@@ -45,23 +54,27 @@ func (r *ClientRepository) Create(ctx context.Context, name, address string, zon
 }
 
 // Upsert inserts a new client or updates an existing one (by name).
-// If a client with the same name does not exist, it inserts a new one.
-// If a client with the same name exists, it updates the address and zone_id.
+// If inserting, assigns a priority_order as append.
 func (r *ClientRepository) Upsert(ctx context.Context, name, address string, zoneID int) (model.Client, error) {
 	var c model.Client
 	var addr sql.NullString
 	var unregDate sql.NullTime
 
-	// Use PostgreSQL UPSERT syntax with ON CONFLICT DO UPDATE
-	err := r.db.QueryRowContext(ctx,
-		`INSERT INTO client (name, address, zone_id)
-		 VALUES ($1, $2, $3)
+	max, err := r.MaxPriorityInZone(ctx, zoneID)
+	if err != nil {
+		return c, fmt.Errorf("getting max priority: %w", err)
+	}
+	newPriority := max + DefaultPriorityGap
+
+	err = r.db.QueryRowContext(ctx,
+		`INSERT INTO client (name, address, zone_id, priority_order)
+		 VALUES ($1, $2, $3, $4)
 		 ON CONFLICT (name) DO UPDATE SET
 		   address = EXCLUDED.address,
 		   zone_id = EXCLUDED.zone_id
-		 RETURNING id, name, address, zone_id, create_date, unregister_date`,
-		name, address, zoneID,
-	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate)
+		 RETURNING id, name, address, zone_id, create_date, unregister_date, priority_order`,
+		name, address, zoneID, newPriority,
+	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate, &c.PriorityOrder)
 	if err != nil {
 		return c, fmt.Errorf("upserting client: %w", err)
 	}
@@ -76,16 +89,16 @@ func (r *ClientRepository) Upsert(ctx context.Context, name, address string, zon
 	return c, nil
 }
 
-// GetByID returns a client by its ID.
+// GetByID returns a client by its ID, including priority_order.
 func (r *ClientRepository) GetByID(ctx context.Context, id int) (model.Client, error) {
 	var c model.Client
 	var addr sql.NullString
 	var unregDate sql.NullTime
 
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, name, address, zone_id, create_date, unregister_date FROM client WHERE id = $1",
+		"SELECT id, name, address, zone_id, create_date, unregister_date, priority_order FROM client WHERE id = $1",
 		id,
-	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate)
+	).Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate, &c.PriorityOrder)
 	if err != nil {
 		return c, fmt.Errorf("getting client %d: %w", id, err)
 	}
@@ -100,13 +113,69 @@ func (r *ClientRepository) GetByID(ctx context.Context, id int) (model.Client, e
 	return c, nil
 }
 
-// GetByZone returns active (not unregistered) clients in a zone, ordered by name.
+// MaxPriorityInZone returns the current maximum priority_order for a zone (0 if none).
+func (r *ClientRepository) MaxPriorityInZone(ctx context.Context, zoneID int) (int, error) {
+	var max sql.NullInt64
+	err := r.db.QueryRowContext(ctx, "SELECT COALESCE(MAX(priority_order), 0) FROM client WHERE zone_id = $1", zoneID).Scan(&max)
+	if err != nil {
+		return 0, fmt.Errorf("getting max priority for zone %d: %w", zoneID, err)
+	}
+	if max.Valid {
+		return int(max.Int64), nil
+	}
+	return 0, nil
+}
+
+// UpdatePriority sets the priority_order for a client.
+func (r *ClientRepository) UpdatePriority(ctx context.Context, id int, priority int) error {
+	_, err := r.db.ExecContext(ctx, "UPDATE client SET priority_order = $1 WHERE id = $2", priority, id)
+	if err != nil {
+		return fmt.Errorf("updating priority for client %d: %w", id, err)
+	}
+	return nil
+}
+
+// ReindexZone rebuilds priority_order values for all clients in the zone using the provided step.
+// It assigns priority = (index+1) * step in current order.
+func (r *ClientRepository) ReindexZone(ctx context.Context, zoneID int, step int) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin reindex tx: %w", err)
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM client WHERE zone_id = $1 AND unregister_date IS NULL ORDER BY priority_order ASC, id ASC FOR UPDATE", zoneID)
+	if err != nil {
+		return fmt.Errorf("selecting clients for reindex: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make([]int, 0)
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return fmt.Errorf("scanning id for reindex: %w", err)
+		}
+		ids = append(ids, id)
+	}
+
+	for i, id := range ids {
+		newPriority := (i + 1) * step
+		if _, err := tx.ExecContext(ctx, "UPDATE client SET priority_order = $1 WHERE id = $2", newPriority, id); err != nil {
+			return fmt.Errorf("updating priority during reindex: %w", err)
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetByZone returns active (not unregistered) clients in a zone, ordered by priority_order.
 func (r *ClientRepository) GetByZone(ctx context.Context, zoneID int) ([]model.Client, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, address, zone_id, create_date, unregister_date
+		`SELECT id, name, address, zone_id, create_date, unregister_date, priority_order
 		 FROM client
 		 WHERE zone_id = $1 AND unregister_date IS NULL
-		 ORDER BY name`,
+		 ORDER BY priority_order ASC`,
 		zoneID,
 	)
 	if err != nil {
@@ -117,13 +186,13 @@ func (r *ClientRepository) GetByZone(ctx context.Context, zoneID int) ([]model.C
 	return scanClients(rows)
 }
 
-// GetAll returns all active (not unregistered) clients ordered by name.
+// GetAll returns all active (not unregistered) clients ordered by priority_order.
 func (r *ClientRepository) GetAll(ctx context.Context) ([]model.Client, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, address, zone_id, create_date, unregister_date
+		`SELECT id, name, address, zone_id, create_date, unregister_date, priority_order
 		 FROM client
 		 WHERE unregister_date IS NULL
-		 ORDER BY name`,
+		 ORDER BY priority_order ASC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listing clients: %w", err)
@@ -157,13 +226,13 @@ func (r *ClientRepository) Unregister(ctx context.Context, id int) error {
 	return nil
 }
 
-// GetInactive returns all inactive (unregistered) clients ordered by name.
+// GetInactive returns all inactive (unregistered) clients ordered by priority_order.
 func (r *ClientRepository) GetInactive(ctx context.Context) ([]model.Client, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT id, name, address, zone_id, create_date, unregister_date
+		`SELECT id, name, address, zone_id, create_date, unregister_date, priority_order
 		 FROM client
 		 WHERE unregister_date IS NOT NULL
-		 ORDER BY name`,
+		 ORDER BY priority_order ASC`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listing inactive clients: %w", err)
@@ -249,7 +318,7 @@ func scanClients(rows *sql.Rows) ([]model.Client, error) {
 		var addr sql.NullString
 		var unregDate sql.NullTime
 
-		if err := rows.Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate); err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &addr, &c.ZoneID, &c.CreateDate, &unregDate, &c.PriorityOrder); err != nil {
 			return nil, fmt.Errorf("scanning client: %w", err)
 		}
 
