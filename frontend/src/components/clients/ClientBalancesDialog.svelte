@@ -25,7 +25,12 @@
     loading = true;
     try {
       await fetchProducts();
-      balances = await GetClientBalances(client.id);
+      if (!client || !client.id) {
+        balances = [];
+        return;
+      }
+      const res = await GetClientBalances(client.id);
+      balances = Array.isArray(res) ? res : [];
     } catch (err) {
       toast.error(String(err));
     } finally {

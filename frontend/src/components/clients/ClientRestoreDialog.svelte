@@ -74,7 +74,6 @@
           <Table.Row>
             <Table.Head>Nombre</Table.Head>
             <Table.Head>Dirección</Table.Head>
-            <Table.Head>Zona</Table.Head>
             <Table.Head class="w-24 text-right">Acción</Table.Head>
           </Table.Row>
         </Table.Header>
@@ -85,11 +84,6 @@
               <Table.Cell class="text-muted-foreground"
                 >{client.address || "—"}</Table.Cell
               >
-              <Table.Cell>
-                <Badge variant="secondary"
-                  >{zoneMap.get(client.zone_id) ?? "—"}</Badge
-                >
-              </Table.Cell>
               <Table.Cell class="text-right">
                 <Button
                   variant="ghost"

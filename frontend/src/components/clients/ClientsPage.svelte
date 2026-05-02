@@ -14,15 +14,13 @@
   import * as Select from "$lib/components/ui/select/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
   import { toast } from "svelte-sonner";
-  import {
-    ExportClients,
-    ExportBalances,
-  } from "wailsjs/go/service/ExportService";
+  import { ExportClients } from "wailsjs/go/service/ExportService";
   import {
     getClients,
     getClientsLoading,
     fetchClients,
     fetchClientsByZone,
+    reorderClient,
   } from "$lib/stores/clients.svelte.js";
   import { getZones, fetchZones } from "$lib/stores/zones.svelte.js";
   import ClientFormDialog from "./ClientFormDialog.svelte";
@@ -43,15 +41,6 @@
     }
   }
 
-  async function exportBalances() {
-    try {
-      await ExportBalances();
-      toast.success("Saldos exportados correctamente");
-    } catch (e) {
-      toast.error(String(e));
-    }
-  }
-
   let formOpen = $state(false);
   let unregisterOpen = $state(false);
   let balancesOpen = $state(false);
@@ -64,6 +53,67 @@
   let historyClient = $state<model.Client | undefined>(undefined);
   let selectedZoneId = $state<string | undefined>(undefined);
   let searchQuery = $state("");
+
+  // Drag-and-drop state
+  let draggingClient = $state<model.Client | undefined>(undefined);
+
+  function handleDragStart(e: DragEvent, client: model.Client) {
+    draggingClient = client;
+    try {
+      e.dataTransfer?.setData("text/plain", String(client.id));
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  async function handleDrop(e: DragEvent, targetClient: model.Client) {
+    e.preventDefault();
+    if (!draggingClient) return;
+    if (draggingClient.id === targetClient.id) {
+      draggingClient = undefined;
+      return;
+    }
+
+    // Find prev id in current filtered list
+    const idx = filteredClients.findIndex((c) => c.id === targetClient.id);
+    const prevID = idx > 0 ? filteredClients[idx - 1].id : 0;
+    const nextID = targetClient.id;
+
+    try {
+      await reorderClient(draggingClient.id, prevID, nextID);
+      // Refresh list for current zone
+      if (selectedZoneId) {
+        await fetchClientsByZone(Number(selectedZoneId));
+      } else {
+        await fetchClients();
+      }
+    } catch (err) {
+      console.error("reorder failed", err);
+    } finally {
+      draggingClient = undefined;
+    }
+  }
+
+  async function handleDropAtEnd(e: DragEvent) {
+    e.preventDefault();
+    if (!draggingClient) return;
+    // place at end
+    const last = filteredClients[filteredClients.length - 1];
+    const prevID = last ? last.id : 0;
+    const nextID = 0;
+    try {
+      await reorderClient(draggingClient.id, prevID, nextID);
+      if (selectedZoneId) {
+        await fetchClientsByZone(Number(selectedZoneId));
+      } else {
+        await fetchClients();
+      }
+    } catch (err) {
+      console.error("reorder failed", err);
+    } finally {
+      draggingClient = undefined;
+    }
+  }
 
   let clients = $derived(getClients());
   let zones = $derived(getZones());
@@ -87,7 +137,13 @@
   });
 
   $effect(() => {
-    if (selectedZoneId && selectedZoneId !== "all") {
+    if (zones.length > 0 && !selectedZoneId) {
+      selectedZoneId = String(zones[0].id);
+    }
+  });
+
+  $effect(() => {
+    if (selectedZoneId) {
       fetchClientsByZone(Number(selectedZoneId));
     } else {
       fetchClients();
@@ -136,10 +192,6 @@
         <HugeiconsIcon icon={Download01Icon} size={14} />
         Exportar Clientes
       </Button>
-      <Button variant="outline" size="default" onclick={exportBalances}>
-        <HugeiconsIcon icon={Download01Icon} size={14} />
-        Exportar Saldos
-      </Button>
       <Button
         variant="outline"
         size="default"
@@ -160,17 +212,16 @@
       bind:value={searchQuery}
       class="max-w-xs"
     />
-    <span class="text-sm text-muted-foreground">Filtrar por zona:</span>
+    <span class="text-sm text-muted-foreground">Zona:</span>
     <Select.Root type="single" bind:value={selectedZoneId}>
       <Select.Trigger class="w-100 truncate">
-        {#if selectedZoneId && selectedZoneId !== "all"}
+        {#if selectedZoneId}
           {zoneMap.get(Number(selectedZoneId)) ?? "Zona"}
         {:else}
-          Todas las zonas
+          Zona
         {/if}
       </Select.Trigger>
       <Select.Content>
-        <Select.Item value="all">Todas las zonas</Select.Item>
         {#each zones as zone (zone.id)}
           <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
         {/each}
@@ -188,9 +239,9 @@
         <p>Esta zona no tiene clientes registrados.</p>
         <button
           class="text-foreground underline underline-offset-2 hover:text-primary"
-          onclick={() => (selectedZoneId = "all")}
+          onclick={() => (selectedZoneId = zones[0] ? String(zones[0].id) : undefined)}
         >
-          Ver todos los clientes
+          Ver clientes de la zona por defecto
         </button>
       </div>
     {:else}
@@ -202,22 +253,21 @@
         <Table.Row>
           <Table.Head>Nombre</Table.Head>
           <Table.Head>Dirección</Table.Head>
-          <Table.Head>Zona</Table.Head>
           <Table.Head class="w-40 text-right">Acciones</Table.Head>
         </Table.Row>
         </Table.Header>
       <Table.Body>
         {#each filteredClients as client (client.id)}
           <Table.Row>
-            <Table.Cell>{client.name}</Table.Cell>
+            <Table.Cell>
+              <div draggable={true} ondragstart={(e) => handleDragStart(e as DragEvent, client)} ondragover={(e) => e.preventDefault()} ondrop={(e) => handleDrop(e as DragEvent, client)} class="flex items-center gap-2">
+                <span class="cursor-grab">☰</span>
+                <span>{client.name}</span>
+              </div>
+            </Table.Cell>
             <Table.Cell class="text-muted-foreground"
               >{client.address || "—"}</Table.Cell
             >
-            <Table.Cell>
-              <Badge variant="secondary"
-                >{zoneMap.get(client.zone_id) ?? "—"}</Badge
-              >
-            </Table.Cell>
             <Table.Cell class="text-right">
               <div class="flex justify-end gap-1">
                 <Button
@@ -256,6 +306,13 @@
             </Table.Cell>
           </Table.Row>
         {/each}
+        <!-- Drop area at end -->
+        <Table.Row>
+          <Table.Cell colspan={3}>
+            <div ondragover={(e) => e.preventDefault()} ondrop={handleDropAtEnd} class="text-center text-sm text-muted-foreground">Arrastra aquí para mover al final</div>
+          </Table.Cell>
+        </Table.Row>
+
       </Table.Body>
     </Table.Root>
   {/if}

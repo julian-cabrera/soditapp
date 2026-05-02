@@ -16,6 +16,8 @@ export function ListInactiveClients():Promise<Array<model.Client>>;
 
 export function MoveClientsToZone(arg1:Array<number>,arg2:number):Promise<void>;
 
+export function ReorderClient(arg1:number,arg2:number,arg3:number):Promise<void>;
+
 export function RestoreClient(arg1:number):Promise<void>;
 
 export function UnregisterClient(arg1:number):Promise<void>;

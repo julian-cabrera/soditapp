@@ -124,41 +124,7 @@ func (s *ExportService) ExportClients() error {
 	return w.Error()
 }
 
-// ExportBalances opens a save dialog and writes client-product balances to CSV.
+// ExportBalances is disabled per refactor: export balances functionality removed.
 func (s *ExportService) ExportBalances() error {
-	path, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		DefaultFilename: "saldos.csv",
-		Filters: []runtime.FileFilter{
-			{DisplayName: "CSV", Pattern: "*.csv"},
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("opening save dialog: %w", err)
-	}
-	if path == "" {
-		return nil
-	}
-
-	balances, err := s.clientProductRepo.GetAllBalances(s.ctx)
-	if err != nil {
-		return fmt.Errorf("fetching balances: %w", err)
-	}
-
-	f, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("creating file: %w", err)
-	}
-	defer f.Close()
-
-	w := csv.NewWriter(f)
-	if err := w.Write([]string{"cliente", "producto", "saldo"}); err != nil {
-		return fmt.Errorf("writing header: %w", err)
-	}
-	for _, b := range balances {
-		if err := w.Write([]string{b.ClientName, b.ProductName, strconv.Itoa(b.Balance)}); err != nil {
-			return fmt.Errorf("writing row: %w", err)
-		}
-	}
-	w.Flush()
-	return w.Error()
+	return fmt.Errorf("Exportar Saldos has been disabled")
 }
