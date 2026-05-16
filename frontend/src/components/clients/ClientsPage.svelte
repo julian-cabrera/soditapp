@@ -239,7 +239,8 @@
         <p>Esta zona no tiene clientes registrados.</p>
         <button
           class="text-foreground underline underline-offset-2 hover:text-primary"
-          onclick={() => (selectedZoneId = zones[0] ? String(zones[0].id) : undefined)}
+          onclick={() =>
+            (selectedZoneId = zones[0] ? String(zones[0].id) : undefined)}
         >
           Ver clientes de la zona por defecto
         </button>
@@ -255,12 +256,21 @@
           <Table.Head>Dirección</Table.Head>
           <Table.Head class="w-40 text-right">Acciones</Table.Head>
         </Table.Row>
-        </Table.Header>
+      </Table.Header>
       <Table.Body>
         {#each filteredClients as client (client.id)}
           <Table.Row>
             <Table.Cell>
-              <div draggable={true} ondragstart={(e) => handleDragStart(e as DragEvent, client)} ondragover={(e) => e.preventDefault()} ondrop={(e) => handleDrop(e as DragEvent, client)} class="flex items-center gap-2">
+              <div
+                role="button"
+                tabindex="0"
+                aria-label="Arrastrar cliente"
+                draggable={true}
+                ondragstart={(e) => handleDragStart(e as DragEvent, client)}
+                ondragover={(e) => e.preventDefault()}
+                ondrop={(e) => handleDrop(e as DragEvent, client)}
+                class="flex items-center gap-2"
+              >
                 <span class="cursor-grab">☰</span>
                 <span>{client.name}</span>
               </div>
@@ -309,10 +319,18 @@
         <!-- Drop area at end -->
         <Table.Row>
           <Table.Cell colspan={3}>
-            <div ondragover={(e) => e.preventDefault()} ondrop={handleDropAtEnd} class="text-center text-sm text-muted-foreground">Arrastra aquí para mover al final</div>
+            <div
+              role="button"
+              tabindex="0"
+              aria-label="Arrastrar al final"
+              ondragover={(e) => e.preventDefault()}
+              ondrop={handleDropAtEnd}
+              class="text-center text-sm text-muted-foreground"
+            >
+              Arrastra aquí para mover al final
+            </div>
           </Table.Cell>
         </Table.Row>
-
       </Table.Body>
     </Table.Root>
   {/if}
