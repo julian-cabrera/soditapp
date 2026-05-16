@@ -4,7 +4,10 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { toast } from "svelte-sonner";
-  import { ListClientsByZone, MoveClientsToZone } from "wailsjs/go/service/ClientService";
+  import {
+    ListClientsByZone,
+    MoveClientsToZone,
+  } from "wailsjs/go/service/ClientService";
   import { getZones, fetchZones } from "$lib/stores/zones.svelte.js";
   import { fetchClients } from "$lib/stores/clients.svelte.js";
   import type { model } from "wailsjs/go/models";
@@ -19,7 +22,7 @@
   let submitting = $state(false);
 
   let availableTargetZones = $derived(
-    zones.filter((z) => String(z.id) !== sourceZoneId)
+    zones.filter((z) => String(z.id) !== sourceZoneId),
   );
 
   $effect(() => {
@@ -110,7 +113,9 @@
     {#if loading}
       <p class="text-sm text-muted-foreground">Cargando clientes...</p>
     {:else if clients.length === 0}
-      <p class="text-sm text-muted-foreground">No hay clientes activos en esta zona.</p>
+      <p class="text-sm text-muted-foreground">
+        No hay clientes activos en esta zona.
+      </p>
     {:else}
       <div class="space-y-3">
         <div class="flex items-center gap-2">
@@ -119,21 +124,33 @@
             checked={selectedIds.size === clients.length}
             onCheckedChange={toggleAll}
           />
-          <Label for="select-all" class="cursor-pointer text-sm text-muted-foreground">
+          <Label
+            for="select-all"
+            class="cursor-pointer text-sm text-muted-foreground"
+          >
             Seleccionar todos ({clients.length})
           </Label>
         </div>
 
         <ul class="max-h-80 overflow-y-auto space-y-2 rounded-md border p-3">
           {#each clients as client (client.id)}
-            <li class="flex items-center gap-2">
+            <li class="grid grid-cols-3 items-start gap-3">
               <Checkbox
                 id="client-{client.id}"
                 checked={selectedIds.has(client.id)}
                 onCheckedChange={() => toggleClient(client.id)}
               />
-              <Label for="client-{client.id}" class="cursor-pointer font-normal">
+              <Label
+                for="client-{client.id}"
+                class="cursor-pointer font-normal text-sm"
+              >
                 {client.name}
+              </Label>
+              <Label
+                for="client-{client.id}"
+                class="cursor-pointer text-xs text-muted-foreground"
+              >
+                {client.address}
               </Label>
             </li>
           {/each}
@@ -145,7 +162,8 @@
           <Select.Root type="single" bind:value={targetZoneId}>
             <Select.Trigger class="w-full">
               {#if targetZoneId}
-                {zones.find((z) => String(z.id) === targetZoneId)?.name ?? "Zona"}
+                {zones.find((z) => String(z.id) === targetZoneId)?.name ??
+                  "Zona"}
               {:else}
                 Mover a...
               {/if}
@@ -162,7 +180,9 @@
           onclick={handleTransfer}
           disabled={selectedIds.size === 0 || !targetZoneId || submitting}
         >
-          {submitting ? "Moviendo..." : `Transferir ${selectedIds.size > 0 ? `(${selectedIds.size})` : ""}`}
+          {submitting
+            ? "Moviendo..."
+            : `Transferir ${selectedIds.size > 0 ? `(${selectedIds.size})` : ""}`}
         </Button>
       </div>
     {/if}
