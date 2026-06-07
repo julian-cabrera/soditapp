@@ -37,7 +37,6 @@ export function groupEntriesByClient(
 let sheets = $state<dto.DeliverySheetDTO[]>([]);
 let loading = $state(false);
 let currentPage = $state(0);
-let previewMode = $state(false);
 let entryEdits = $state<Map<string, { charged: number; credit: number }>>(
   new Map(),
 );
@@ -72,17 +71,8 @@ export function setSelectedDate(date: Date) {
   selectedDate = date;
 }
 
-export function getPreviewMode() {
-  return previewMode;
-}
-
-export function setPreviewMode(value: boolean) {
-  previewMode = value;
-}
-
 export async function fetchDeliverySheets(zoneId: number) {
   selectedZoneId = zoneId;
-  previewMode = false;
   loading = true;
   try {
     sheets = await GetDeliverySheets(zoneId);
@@ -119,26 +109,42 @@ export function updateEntryEdit(
   entryEdits = new Map(entryEdits);
 }
 
+function formatDeliveryDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export async function confirmDelivery() {
-  const adjustments: service.BalanceAdjustment[] = [];
+  const deliveryDate = formatDeliveryDate(selectedDate);
+  const adjustments: Array<{
+    client_id: number;
+    product_id: number;
+    delta: number;
+    charged_units: number;
+    delivery_date: string;
+  }> = [];
+
   for (const [key, edit] of entryEdits) {
     if (edit.charged > 0 || edit.credit > 0) {
       const [clientId, productId] = key.split("-").map(Number);
-      adjustments.push(
-        new service.BalanceAdjustment({
-          client_id: clientId,
-          product_id: productId,
-          delta: -edit.credit,
-          charged_units: edit.charged,
-        }),
-      );
+      adjustments.push({
+        client_id: clientId,
+        product_id: productId,
+        delta: -edit.credit,
+        charged_units: edit.charged,
+        delivery_date: deliveryDate,
+      });
     }
   }
   if (adjustments.length === 0) return;
 
   loading = true;
   try {
-    await ConfirmDelivery(adjustments);
+    await ConfirmDelivery(
+      adjustments as unknown as service.BalanceAdjustment[],
+    );
     if (selectedZoneId !== undefined) {
       await fetchDeliverySheets(selectedZoneId);
     }

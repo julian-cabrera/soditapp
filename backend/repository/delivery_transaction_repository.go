@@ -30,11 +30,11 @@ func NewDeliveryTransactionRepository(db *sql.DB) *DeliveryTransactionRepository
 }
 
 // InsertTx inserts a delivery transaction record within an existing DB transaction.
-func (r *DeliveryTransactionRepository) InsertTx(ctx context.Context, tx *sql.Tx, clientID, productID, chargedUnits, creditUnits int) error {
+func (r *DeliveryTransactionRepository) InsertTx(ctx context.Context, tx *sql.Tx, clientID, productID, chargedUnits, creditUnits int, deliveryDate time.Time) error {
 	_, err := tx.ExecContext(ctx,
-		`INSERT INTO delivery_transaction (client_id, product_id, charged_units, credit_units)
-		 VALUES ($1, $2, $3, $4)`,
-		clientID, productID, chargedUnits, creditUnits,
+		`INSERT INTO delivery_transaction (client_id, product_id, charged_units, credit_units, delivery_date)
+		 VALUES ($1, $2, $3, $4, $5)`,
+		clientID, productID, chargedUnits, creditUnits, deliveryDate,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting delivery transaction for client %d, product %d: %w", clientID, productID, err)

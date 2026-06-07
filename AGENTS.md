@@ -139,4 +139,4 @@ soditapp/
 - **Entities are defined:** Zone, Client, Product, and ClientProduct are the core entities. Do not add new entities without explicit discussion.
 - **Balance logic:** `ClientProduct.balance += credit_units` on delivery confirmation. Recalculate deltas on edit/delete. This is the only mutation path for balances.
 - **DTOs are ephemeral:** `DeliverySheetDTO` and `DeliveryEntryDTO` are runtime-only Go structs for print preview. They are never persisted to the database.
-- **Print layout:** Delivery sheets have exactly 4 generic day columns, organized by zone, showing only clients with negative balance. Pagination at A4 boundaries.
+- **Print layout:** Delivery sheets have exactly 4 generic day columns, organized by zone, showing all active clients. Pagination at A4 boundaries.

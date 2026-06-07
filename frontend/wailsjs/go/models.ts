@@ -287,6 +287,7 @@ export namespace service {
 	    product_id: number;
 	    delta: number;
 	    charged_units: number;
+	    delivery_date: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new BalanceAdjustment(source);
@@ -298,6 +299,7 @@ export namespace service {
 	        this.product_id = source["product_id"];
 	        this.delta = source["delta"];
 	        this.charged_units = source["charged_units"];
+	        this.delivery_date = source["delivery_date"];
 	    }
 	}
 	export class ImportResult {

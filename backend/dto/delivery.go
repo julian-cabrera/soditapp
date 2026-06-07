@@ -30,7 +30,7 @@ type DeliverySheetDTO struct {
 	Entries    []DeliveryEntryDTO `json:"entries"`
 }
 
-// BuildDeliverySheets converts negative-balance query rows into paginated delivery sheets.
+// BuildDeliverySheets converts query rows into paginated delivery sheets.
 // Each sheet holds at most entriesPerPage entries. ChargedUnits and CreditUnits are
 // initialized to 0 — they are filled in by the user during delivery.
 func BuildDeliverySheets(zoneID int, zoneName string, rows []repository.NegativeBalanceRow, entriesPerPage int) []DeliverySheetDTO {
