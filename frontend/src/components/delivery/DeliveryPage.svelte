@@ -8,7 +8,6 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
-  import * as Dialog from "$lib/components/ui/dialog/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
   import { getZones, fetchZones } from "$lib/stores/zones.svelte.js";
@@ -21,16 +20,16 @@
     setCurrentPage,
     updateEntryEdit,
     groupEntriesByClient,
-    getSelectedDate,
+    getWeekStartDate,
+    getWeekEndDate,
+    formatDateShort,
   } from "$lib/stores/delivery.svelte.js";
   import DeliveryConfirmDialog from "./DeliveryConfirmDialog.svelte";
-  import DeliverySheetPreview from "./DeliverySheetPreview.svelte";
   import WeekSelector from "./WeekSelector.svelte";
   import type { dto } from "wailsjs/go/models";
 
   let selectedZoneId = $state<string | undefined>(undefined);
   let confirmOpen = $state(false);
-  let printOpen = $state(false);
   let activeSection = $state<"load" | "print">("load");
 
   let zones = $derived(getZones());
@@ -41,9 +40,8 @@
   let currentSheet = $derived(
     sheets[currentPageIndex] as dto.DeliverySheetDTO | undefined,
   );
-  let selectedDate = $derived(getSelectedDate());
-
-  let dateLabel = $derived(formatDate(selectedDate));
+  let weekStart = $derived(formatDateShort(getWeekStartDate()));
+  let weekEnd = $derived(formatDateShort(getWeekEndDate()));
 
   let adjustmentCount = $derived(() => {
     let count = 0;
@@ -57,13 +55,6 @@
     if (!currentSheet) return [];
     return groupEntriesByClient(currentSheet.entries);
   });
-
-  function formatDate(date: Date): string {
-    const d = String(date.getDate()).padStart(2, "0");
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const y = date.getFullYear();
-    return `${d}/${m}/${y}`;
-  }
 
   $effect(() => {
     fetchZones();
@@ -83,6 +74,128 @@
   ) {
     const target = e.currentTarget as HTMLInputElement;
     updateEntryEdit(clientId, productId, field, Number(target.value) || 0);
+  }
+
+  function buildSheetHTML(
+    sheet: dto.DeliverySheetDTO,
+    sheetTotal: number,
+    startIndex: number,
+  ): string {
+    const groups = groupEntriesByClient(sheet.entries);
+    const dayColumns = [1, 2, 3, 4];
+    const dayHeaders = dayColumns
+      .map(() => `<th colspan="2" class="sheet-th">‎</th>`)
+      .join("");
+    const subHeaders = dayColumns
+      .map(
+        () => `<th class="sheet-th-sub">C</th><th class="sheet-th-sub">F</th>`,
+      )
+      .join("");
+    const dayCells = dayColumns
+      .map(
+        () =>
+          `<td class="sheet-td sheet-td-day"></td><td class="sheet-td sheet-td-day"></td>`,
+      )
+      .join("");
+
+    const rows = groups
+      .map(
+        (g, i) => `
+        <tr>
+          <td class="sheet-td sheet-td-name"><span class="sheet-td-idx">${startIndex + i + 1}</span>${g.clientName}<br/><span class="sheet-td-addr">${g.clientAddress || "—"}</span></td>
+          <td class="sheet-td sheet-td-num">${g.clientBalance}</td>
+          ${dayCells}
+        </tr>`,
+      )
+      .join("");
+
+    return `
+      <div class="sheet-page">
+        <div class="sheet-page-header">
+          <div class="sheet-header-left">
+            <div><b>Fecha inicio</b>: ${weekStart}</div>
+            <div><b>Fecha fin</b>: .....................................................</div>
+          </div>
+          <div class="sheet-header-center font-semibold"><b>Zona</b>: ${sheet.zone_name}</div>
+          <div class="sheet-header-right"><b>Página</b> ${sheet.page_number} de ${sheetTotal}</div>
+        </div>
+        <table class="sheet-table">
+          <colgroup>
+            <col style="width:35%">
+            <col style="width:5%">
+            <col style="width:7.5%"><col style="width:7.5%">
+            <col style="width:7.5%"><col style="width:7.5%">
+            <col style="width:7.5%"><col style="width:7.5%">
+            <col style="width:7.5%"><col style="width:7.5%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th colspan="2" class="sheet-th"></th>
+              ${dayHeaders}
+            </tr>
+            <tr>
+              <th class="sheet-th-sub"></th>
+              <th class="sheet-th-sub"></th>
+              ${subHeaders}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  function printDeliverySheet() {
+    if (sheets.length === 0) return;
+    let offset = 0;
+    const pages = sheets.map((s) => {
+      const html = buildSheetHTML(s, sheets.length, offset);
+      offset += groupEntriesByClient(s.entries).length;
+      return html;
+    }).join("");
+    const html = `<!DOCTYPE html>
+                  <html lang="es">
+                  <head>
+                  <meta charset="UTF-8">
+                  <title>Planilla de Entrega</title>
+                  <style>
+                    @page { size: 210mm 297mm; margin: 10mm; }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { background: white; font-family: system-ui, -apple-system, sans-serif; }
+                    .sheet-page {
+                      width: 210mm; height: 297mm;
+                      padding: 10mm;
+                      page-break-after: always; break-after: page;
+                      overflow: hidden;
+                    }
+                    .sheet-page:last-child { page-break-after: auto; break-after: auto; }
+                    .sheet-page-header { display: flex; justify-content: space-between; align-items: flex-start; font-size: 11pt; margin-bottom: 0.5rem; }
+                    .sheet-header-left { text-align: left; line-height: 1.6; }
+                    .sheet-header-center { text-align: center; flex: 1; }
+                    .sheet-header-right { text-align: right; }
+                    .sheet-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10pt; }
+                    .sheet-table tbody tr { height: 10mm; }
+                    .sheet-th { border: 1px solid #000; padding: 3px 6px; background: #eee; text-align: center; vertical-align: middle; }
+                    .sheet-th-sub { border: 1px solid #000; padding: 2px 4px; background: #eee; text-align: center; font-size: 9pt; }
+                    .sheet-td { border: 1px solid #000; padding: 3px 6px; vertical-align: top; }
+                    .sheet-td-name { font-weight: 600; width: 35%; }
+                    .sheet-td-idx { display: inline-block; width: 20px; text-align: right; margin-right: 4px; font-weight: 400; color: #666; }
+                    .sheet-td-addr { font-weight: 400; font-size: 9pt; color: #666; }
+                    .sheet-td-num { width: 5%; text-align: right; vertical-align: top; font-size: 10pt; }
+                    @media print { .sheet-page { padding: 0; } }
+                  </style>
+                  </head>
+                  <body>
+                  <div>${pages}</div>
+                  </body>
+                  </html>`;
+
+    const printWindow = window.open("", "_blank", "width=800,height=600");
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
   }
 </script>
 
@@ -258,10 +371,10 @@
       <div class="flex flex-wrap items-center gap-2">
         <Button
           variant="default"
-          disabled={!selectedZoneId}
-          onclick={() => (printOpen = true)}
+          disabled={!selectedZoneId || sheets.length === 0}
+          onclick={printDeliverySheet}
         >
-          Imprimir planilla
+          Imprimir plantilla
         </Button>
         {#if selectedZoneId}
           <span class="text-sm text-muted-foreground">
@@ -278,12 +391,6 @@
       {/if}
     </div>
   {/if}
-
-  <Dialog.Root bind:open={printOpen}>
-    <Dialog.Content class="max-w-5xl w-full">
-      <DeliverySheetPreview {sheets} onBack={() => (printOpen = false)} />
-    </Dialog.Content>
-  </Dialog.Root>
 
   <DeliveryConfirmDialog
     bind:open={confirmOpen}

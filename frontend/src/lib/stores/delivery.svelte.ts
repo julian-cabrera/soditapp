@@ -43,6 +43,22 @@ let entryEdits = $state<Map<string, { charged: number; credit: number }>>(
 let selectedZoneId = $state<number | undefined>(undefined);
 let selectedDate = $state<Date>(new Date());
 
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getWeekEnd(date: Date): Date {
+  const start = getWeekStart(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return end;
+}
+
 export function getSheets() {
   return sheets;
 }
@@ -67,6 +83,14 @@ export function getSelectedDate() {
   return selectedDate;
 }
 
+export function getWeekStartDate(): Date {
+  return getWeekStart(selectedDate);
+}
+
+export function getWeekEndDate(): Date {
+  return getWeekEnd(selectedDate);
+}
+
 export function setSelectedDate(date: Date) {
   selectedDate = date;
 }
@@ -87,6 +111,9 @@ export async function fetchDeliverySheets(zoneId: number) {
       }
     }
     entryEdits = edits;
+  } catch {
+    sheets = [];
+    entryEdits = new Map();
   } finally {
     loading = false;
   }
@@ -114,6 +141,13 @@ function formatDeliveryDate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+export function formatDateShort(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 export async function confirmDelivery() {

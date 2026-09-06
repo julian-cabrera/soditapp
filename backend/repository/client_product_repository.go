@@ -174,13 +174,14 @@ func (r *ClientProductRepository) GetNegativeBalancesByZone(ctx context.Context,
 // joined with client and product details for delivery sheet building.
 func (r *ClientProductRepository) GetAllByZone(ctx context.Context, zoneID int) ([]NegativeBalanceRow, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT c.id, c.name, COALESCE(c.address, ''), cp.balance, p.id, p.name
+		`SELECT c.id, c.name, COALESCE(c.address, ''), COALESCE(cp.balance, 0), p.id, p.name
 		 FROM client c
 		 CROSS JOIN product p
 		 LEFT JOIN client_product cp ON cp.client_id = c.id AND cp.product_id = p.id
 		 WHERE c.zone_id = $1
 		   AND c.unregister_date IS NULL
-		 ORDER BY c.name, p.name`,
+		   AND p.active = TRUE
+		 ORDER BY c.priority_order ASC, p.name`,
 		zoneID,
 	)
 	if err != nil {

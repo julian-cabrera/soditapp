@@ -7,7 +7,7 @@ import (
 )
 
 // DefaultEntriesPerPage is the number of client entries that fit on one A4 page.
-const DefaultEntriesPerPage = 18
+const DefaultEntriesPerPage = 25
 
 // DeliveryEntryDTO represents a single client row on a delivery sheet.
 type DeliveryEntryDTO struct {

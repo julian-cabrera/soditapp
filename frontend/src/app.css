@@ -155,44 +155,4 @@ body {
     padding: 0 !important;
     overflow: visible !important;
   }
-
-  .sheet-page {
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .sheet-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
-  }
-
-  .sheet-page table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 10pt;
-    table-layout: fixed;
-  }
-
-  .sheet-page table th:first-child,
-  .sheet-page table td:first-child {
-    width: 30%;
-  }
-
-  .sheet-page th,
-  .sheet-page td {
-    border: 1px solid #000;
-    padding: 3px 6px;
-    vertical-align: top;
-  }
-
-  .sheet-page th {
-    background: #eee !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-
-  .sheet-page .day-cell {
-    min-width: 20mm;
-    height: 8mm;
-  }
 }
