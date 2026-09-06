@@ -3,6 +3,7 @@ import {
   ConfirmDelivery,
 } from "wailsjs/go/service/ClientProductService";
 import { service, type dto } from "wailsjs/go/models";
+import { formatISO, formatDate } from "$lib/utils/date.js";
 
 export interface ClientGroup {
   clientId: number;
@@ -136,22 +137,12 @@ export function updateEntryEdit(
   entryEdits = new Map(entryEdits);
 }
 
-function formatDeliveryDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 export function formatDateShort(date: Date): string {
-  const d = String(date.getDate()).padStart(2, "0");
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const y = date.getFullYear();
-  return `${d}/${m}/${y}`;
+  return formatDate(date);
 }
 
 export async function confirmDelivery() {
-  const deliveryDate = formatDeliveryDate(selectedDate);
+  const deliveryDate = formatISO(selectedDate);
   const adjustments: Array<{
     client_id: number;
     product_id: number;
