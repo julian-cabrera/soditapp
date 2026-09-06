@@ -221,7 +221,6 @@
 
   <div class="grid gap-4 md:grid-cols-[minmax(220px,_1fr)_minmax(220px,_1fr)]">
     <div class="space-y-2">
-      <span class="text-sm text-muted-foreground">Zona:</span>
       <Select.Root type="single" bind:value={selectedZoneId}>
         <Select.Trigger class="w-full">
           {#if selectedZoneId}
@@ -239,7 +238,6 @@
     </div>
 
     <div class="space-y-2">
-      <span class="text-sm text-muted-foreground">Fecha:</span>
       <WeekSelector />
     </div>
   </div>

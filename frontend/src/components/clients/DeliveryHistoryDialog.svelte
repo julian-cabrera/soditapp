@@ -2,10 +2,10 @@
   import * as Dialog from "$lib/components/ui/dialog/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
+  import DatePicker from "$components/ui/DatePicker.svelte";
   import { toast } from "svelte-sonner";
   import { GetClientHistory } from "wailsjs/go/service/ReportService";
+  import { displayToISO, isoToDisplay, defaultStartDate, defaultEndDate } from "$lib/utils/date.js";
   import type { dto } from "wailsjs/go/models";
 
   let {
@@ -13,16 +13,6 @@
     clientId,
     clientName,
   }: { open: boolean; clientId: number; clientName: string } = $props();
-
-  function defaultEndDate() {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  function defaultStartDate() {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
-  }
 
   let startDate = $state(defaultStartDate());
   let endDate = $state(defaultEndDate());
@@ -40,7 +30,7 @@
   async function search() {
     loading = true;
     try {
-      rows = await GetClientHistory(clientId, startDate, endDate);
+      rows = await GetClientHistory(clientId, displayToISO(startDate), displayToISO(endDate));
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -56,14 +46,8 @@
     </Dialog.Header>
 
     <div class="flex items-end gap-3">
-      <div class="grid gap-1">
-        <Label for="start-date">Desde</Label>
-        <Input id="start-date" type="date" bind:value={startDate} class="w-40" />
-      </div>
-      <div class="grid gap-1">
-        <Label for="end-date">Hasta</Label>
-        <Input id="end-date" type="date" bind:value={endDate} class="w-40" />
-      </div>
+      <DatePicker bind:value={startDate} label="Desde" />
+      <DatePicker bind:value={endDate} label="Hasta" />
       <Button onclick={search} disabled={loading}>Buscar</Button>
     </div>
 
@@ -84,7 +68,7 @@
         <Table.Body>
           {#each rows as row, i (i)}
             <Table.Row>
-              <Table.Cell>{row.delivery_date}</Table.Cell>
+              <Table.Cell>{isoToDisplay(row.delivery_date)}</Table.Cell>
               <Table.Cell>{row.product_name}</Table.Cell>
               <Table.Cell class="text-right">{row.charged_units}</Table.Cell>
               <Table.Cell class="text-right">{row.credit_units}</Table.Cell>
