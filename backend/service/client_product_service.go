@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"soditapp/backend/dto"
 	"soditapp/backend/model"
@@ -12,10 +13,11 @@ import (
 
 // BalanceAdjustment represents a single balance change in a delivery confirmation.
 type BalanceAdjustment struct {
-	ClientID     int `json:"client_id"`
-	ProductID    int `json:"product_id"`
-	Delta        int `json:"delta"`          // negative value = credit units (increases debt)
-	ChargedUnits int `json:"charged_units"`  // units paid on the spot (no balance change)
+	ClientID     int    `json:"client_id"`
+	ProductID    int    `json:"product_id"`
+	Delta        int    `json:"delta"`          // negative value = credit units (increases debt)
+	ChargedUnits int    `json:"charged_units"`  // units paid on the spot (no balance change)
+	DeliveryDate string `json:"delivery_date"`
 }
 
 // ClientProductService exposes client-product balance operations as Wails-bound methods.
@@ -69,11 +71,17 @@ func (s *ClientProductService) ConfirmDelivery(adjustments []BalanceAdjustment) 
 				return fmt.Errorf("adjusting balance for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
 			}
 		}
+
+		deliveryDate, err := time.Parse("2006-01-02", adj.DeliveryDate)
+		if err != nil {
+			return fmt.Errorf("parsing delivery date %q: %w", adj.DeliveryDate, err)
+		}
+
 		creditUnits := -adj.Delta // delta is stored as negative; invert to get positive credit count
 		if creditUnits < 0 {
 			creditUnits = 0
 		}
-		if err := s.txRepo.InsertTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.ChargedUnits, creditUnits); err != nil {
+		if err := s.txRepo.InsertTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.ChargedUnits, creditUnits, deliveryDate); err != nil {
 			return fmt.Errorf("recording transaction for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
 		}
 	}

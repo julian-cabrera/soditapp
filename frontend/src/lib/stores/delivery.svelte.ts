@@ -37,12 +37,27 @@ export function groupEntriesByClient(
 let sheets = $state<dto.DeliverySheetDTO[]>([]);
 let loading = $state(false);
 let currentPage = $state(0);
-let previewMode = $state(false);
 let entryEdits = $state<Map<string, { charged: number; credit: number }>>(
   new Map(),
 );
 let selectedZoneId = $state<number | undefined>(undefined);
 let selectedDate = $state<Date>(new Date());
+
+function getWeekStart(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function getWeekEnd(date: Date): Date {
+  const start = getWeekStart(date);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  return end;
+}
 
 export function getSheets() {
   return sheets;
@@ -68,21 +83,20 @@ export function getSelectedDate() {
   return selectedDate;
 }
 
+export function getWeekStartDate(): Date {
+  return getWeekStart(selectedDate);
+}
+
+export function getWeekEndDate(): Date {
+  return getWeekEnd(selectedDate);
+}
+
 export function setSelectedDate(date: Date) {
   selectedDate = date;
 }
 
-export function getPreviewMode() {
-  return previewMode;
-}
-
-export function setPreviewMode(value: boolean) {
-  previewMode = value;
-}
-
 export async function fetchDeliverySheets(zoneId: number) {
   selectedZoneId = zoneId;
-  previewMode = false;
   loading = true;
   try {
     sheets = await GetDeliverySheets(zoneId);
@@ -97,6 +111,9 @@ export async function fetchDeliverySheets(zoneId: number) {
       }
     }
     entryEdits = edits;
+  } catch {
+    sheets = [];
+    entryEdits = new Map();
   } finally {
     loading = false;
   }
@@ -119,26 +136,49 @@ export function updateEntryEdit(
   entryEdits = new Map(entryEdits);
 }
 
+function formatDeliveryDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function formatDateShort(date: Date): string {
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
 export async function confirmDelivery() {
-  const adjustments: service.BalanceAdjustment[] = [];
+  const deliveryDate = formatDeliveryDate(selectedDate);
+  const adjustments: Array<{
+    client_id: number;
+    product_id: number;
+    delta: number;
+    charged_units: number;
+    delivery_date: string;
+  }> = [];
+
   for (const [key, edit] of entryEdits) {
     if (edit.charged > 0 || edit.credit > 0) {
       const [clientId, productId] = key.split("-").map(Number);
-      adjustments.push(
-        new service.BalanceAdjustment({
-          client_id: clientId,
-          product_id: productId,
-          delta: -edit.credit,
-          charged_units: edit.charged,
-        }),
-      );
+      adjustments.push({
+        client_id: clientId,
+        product_id: productId,
+        delta: -edit.credit,
+        charged_units: edit.charged,
+        delivery_date: deliveryDate,
+      });
     }
   }
   if (adjustments.length === 0) return;
 
   loading = true;
   try {
-    await ConfirmDelivery(adjustments);
+    await ConfirmDelivery(
+      adjustments as unknown as service.BalanceAdjustment[],
+    );
     if (selectedZoneId !== undefined) {
       await fetchDeliverySheets(selectedZoneId);
     }

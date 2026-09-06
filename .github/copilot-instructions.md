@@ -41,7 +41,7 @@ Database / migrations:
 - Wails bindings: only expose service-level methods (on `App` or structs registered in `Bind`). Do not bind repository-layer internals directly.
 - DTOs (DeliverySheetDTO, DeliveryEntryDTO) are ephemeral and must NOT be persisted; they exist solely for print/preview.
 - Balance mutation rule: only update `ClientProduct.balance` via delivery confirmation logic (`balance += credit_units`); recalc deltas on edits/deletes.
-- Delivery sheets: exactly 4 day columns, grouped by zone, only show clients with negative balances; paginate at A4 boundaries.
+- Delivery sheets: exactly 4 day columns, grouped by zone, show all active clients in the zone; paginate at A4 boundaries.
 
 ## Where to read more
 - `docs/soditapp.md` — requirements, entities, balance logic, print layout.

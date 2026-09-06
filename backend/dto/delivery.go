@@ -7,7 +7,7 @@ import (
 )
 
 // DefaultEntriesPerPage is the number of client entries that fit on one A4 page.
-const DefaultEntriesPerPage = 18
+const DefaultEntriesPerPage = 25
 
 // DeliveryEntryDTO represents a single client row on a delivery sheet.
 type DeliveryEntryDTO struct {
@@ -30,7 +30,7 @@ type DeliverySheetDTO struct {
 	Entries    []DeliveryEntryDTO `json:"entries"`
 }
 
-// BuildDeliverySheets converts negative-balance query rows into paginated delivery sheets.
+// BuildDeliverySheets converts query rows into paginated delivery sheets.
 // Each sheet holds at most entriesPerPage entries. ChargedUnits and CreditUnits are
 // initialized to 0 — they are filled in by the user during delivery.
 func BuildDeliverySheets(zoneID int, zoneName string, rows []repository.NegativeBalanceRow, entriesPerPage int) []DeliverySheetDTO {
