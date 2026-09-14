@@ -31,10 +31,10 @@ export async function fetchClients() {
   }
 }
 
-export async function fetchClientsByZone(zoneId: number) {
+export async function fetchClientsByZone(zoneRefUUID: string) {
   loading = true;
   try {
-    clients = (await ListClientsByZone(zoneId)) ?? [];
+    clients = (await ListClientsByZone(zoneRefUUID)) ?? [];
   } finally {
     loading = false;
   }
@@ -43,11 +43,11 @@ export async function fetchClientsByZone(zoneId: number) {
 export async function createClient(
   name: string,
   address: string,
-  zoneId: number,
+  zoneRefUUID: string,
 ) {
   loading = true;
   try {
-    await CreateClient(name, address, zoneId);
+    await CreateClient(name, address, zoneRefUUID);
     await fetchClients();
   } finally {
     loading = false;
@@ -58,11 +58,11 @@ export async function updateClient(
   id: number,
   name: string,
   address: string,
-  zoneId: number,
+  zoneRefUUID: string,
 ) {
   loading = true;
   try {
-    await UpdateClient(id, name, address, zoneId);
+    await UpdateClient(id, name, address, zoneRefUUID);
     await fetchClients();
   } finally {
     loading = false;

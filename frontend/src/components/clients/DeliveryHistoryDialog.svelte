@@ -10,9 +10,9 @@
 
   let {
     open = $bindable(false),
-    clientId,
+    clientRefUUID,
     clientName,
-  }: { open: boolean; clientId: number; clientName: string } = $props();
+  }: { open: boolean; clientRefUUID: string; clientName: string } = $props();
 
   let startDate = $state(defaultStartDate());
   let endDate = $state(defaultEndDate());
@@ -30,7 +30,7 @@
   async function search() {
     loading = true;
     try {
-      rows = await GetClientHistory(clientId, displayToISO(startDate), displayToISO(endDate));
+      rows = await GetClientHistory(clientRefUUID, displayToISO(startDate), displayToISO(endDate));
     } catch (err) {
       toast.error(String(err));
     } finally {

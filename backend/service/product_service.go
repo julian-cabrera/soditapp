@@ -20,6 +20,11 @@ func (s *ProductService) Init(ctx context.Context, repo *repository.ProductRepos
 	s.repo = repo
 }
 
+// Reinit updates runtime dependencies (called after database import/reopen).
+func (s *ProductService) Reinit(repo *repository.ProductRepository) {
+	s.repo = repo
+}
+
 func (s *ProductService) CreateProduct(name, typ string) (model.Product, error) {
 	if name == "" {
 		return model.Product{}, fmt.Errorf("product name cannot be empty")

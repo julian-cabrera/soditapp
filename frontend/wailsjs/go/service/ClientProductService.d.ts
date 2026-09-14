@@ -7,14 +7,16 @@ import {context} from '../models';
 import {sql} from '../models';
 import {repository} from '../models';
 
-export function AdjustBalance(arg1:number,arg2:number,arg3:number):Promise<void>;
+export function AdjustBalance(arg1:string,arg2:string,arg3:number):Promise<void>;
 
 export function ConfirmDelivery(arg1:Array<service.BalanceAdjustment>):Promise<void>;
 
-export function EnsureClientProduct(arg1:number,arg2:number):Promise<model.ClientProduct>;
+export function EnsureClientProduct(arg1:string,arg2:string):Promise<model.ClientProduct>;
 
-export function GetClientBalances(arg1:number):Promise<Array<model.ClientProduct>>;
+export function GetClientBalances(arg1:string):Promise<Array<model.ClientProduct>>;
 
 export function GetDeliverySheets(arg1:number):Promise<Array<dto.DeliverySheetDTO>>;
 
 export function Init(arg1:context.Context,arg2:sql.DB,arg3:repository.ClientProductRepository,arg4:repository.ZoneRepository,arg5:repository.DeliveryTransactionRepository):Promise<void>;
+
+export function Reinit(arg1:sql.DB,arg2:repository.ClientProductRepository,arg3:repository.ZoneRepository,arg4:repository.DeliveryTransactionRepository):Promise<void>;

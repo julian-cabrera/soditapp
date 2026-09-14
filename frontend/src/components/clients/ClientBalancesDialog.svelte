@@ -13,7 +13,7 @@
   let loading = $state(false);
 
   let products = $derived(getProducts());
-  let productMap = $derived(new Map(products.map((p) => [p.id, p.name])));
+  let productMap = $derived(new Map(products.map((p) => [p.reference_uuid, p.name])));
 
   $effect(() => {
     if (open) {
@@ -25,11 +25,11 @@
     loading = true;
     try {
       await fetchProducts();
-      if (!client || !client.id) {
+      if (!client || !client.reference_uuid) {
         balances = [];
         return;
       }
-      const res = await GetClientBalances(client.id);
+      const res = await GetClientBalances(client.reference_uuid);
       balances = Array.isArray(res) ? res : [];
     } catch (err) {
       toast.error(String(err));

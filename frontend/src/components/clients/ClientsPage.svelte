@@ -5,7 +5,6 @@
     Delete01Icon,
     PlusSignIcon,
     Coins01Icon,
-    Download01Icon,
     TimeScheduleIcon,
   } from "@hugeicons/core-free-icons";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -13,8 +12,6 @@
   import * as Table from "$lib/components/ui/table/index.js";
   import * as Select from "$lib/components/ui/select/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
-  import { toast } from "svelte-sonner";
-  import { ExportClients } from "wailsjs/go/service/ExportService";
   import {
     getClients,
     getClientsLoading,
@@ -26,25 +23,14 @@
   import ClientFormDialog from "./ClientFormDialog.svelte";
   import ClientUnregisterDialog from "./ClientUnregisterDialog.svelte";
   import ClientBalancesDialog from "./ClientBalancesDialog.svelte";
-  import ImportClientsDialog from "./ImportClientsDialog.svelte";
   import DeliveryHistoryDialog from "./DeliveryHistoryDialog.svelte";
   import ClientActionDialog from "./ClientActionDialog.svelte";
   import ClientRestoreDialog from "./ClientRestoreDialog.svelte";
   import type { model } from "wailsjs/go/models";
 
-  async function exportClients() {
-    try {
-      await ExportClients();
-      toast.success("Clientes exportados correctamente");
-    } catch (e) {
-      toast.error(String(e));
-    }
-  }
-
   let formOpen = $state(false);
   let unregisterOpen = $state(false);
   let balancesOpen = $state(false);
-  let importOpen = $state(false);
   let historyOpen = $state(false);
   let actionOpen = $state(false);
   let restoreOpen = $state(false);
@@ -83,7 +69,7 @@
       await reorderClient(draggingClient.id, prevID, nextID);
       // Refresh list for current zone
       if (selectedZoneId) {
-        await fetchClientsByZone(Number(selectedZoneId));
+        await fetchClientsByZone(selectedZoneId);
       } else {
         await fetchClients();
       }
@@ -104,7 +90,7 @@
     try {
       await reorderClient(draggingClient.id, prevID, nextID);
       if (selectedZoneId) {
-        await fetchClientsByZone(Number(selectedZoneId));
+        await fetchClientsByZone(selectedZoneId);
       } else {
         await fetchClients();
       }
@@ -118,7 +104,7 @@
   let clients = $derived(getClients());
   let zones = $derived(getZones());
   let loading = $derived(getClientsLoading());
-  let zoneMap = $derived(new Map(zones.map((z) => [z.id, z.name])));
+  let zoneMap = $derived(new Map(zones.map((z) => [z.reference_uuid, z.name])));
   let filteredClients = $derived(
     searchQuery
       ? clients.filter((c) => {
@@ -138,13 +124,13 @@
 
   $effect(() => {
     if (zones.length > 0 && !selectedZoneId) {
-      selectedZoneId = String(zones[0].id);
+      selectedZoneId = zones[0].reference_uuid;
     }
   });
 
   $effect(() => {
     if (selectedZoneId) {
-      fetchClientsByZone(Number(selectedZoneId));
+      fetchClientsByZone(selectedZoneId);
     } else {
       fetchClients();
     }
@@ -188,17 +174,6 @@
   <div class="flex items-center justify-between">
     <h2 class="text-lg font-semibold">Clientes</h2>
     <div class="flex gap-2">
-      <Button variant="outline" size="default" onclick={exportClients}>
-        <HugeiconsIcon icon={Download01Icon} size={14} />
-        Exportar Clientes
-      </Button>
-      <Button
-        variant="outline"
-        size="default"
-        onclick={() => (importOpen = true)}
-      >
-        Importar Clientes
-      </Button>
       <Button size="default" onclick={openCreate}>
         <HugeiconsIcon icon={PlusSignIcon} size={14} />
         Nuevo Cliente
@@ -216,14 +191,14 @@
     <Select.Root type="single" bind:value={selectedZoneId}>
       <Select.Trigger class="w-100 truncate">
         {#if selectedZoneId}
-          {zoneMap.get(Number(selectedZoneId)) ?? "Zona"}
+          {zoneMap.get(selectedZoneId) ?? "Zona"}
         {:else}
           Zona
         {/if}
       </Select.Trigger>
       <Select.Content>
         {#each zones as zone (zone.id)}
-          <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
+          <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
         {/each}
       </Select.Content>
     </Select.Root>
@@ -240,7 +215,7 @@
         <button
           class="text-foreground underline underline-offset-2 hover:text-primary"
           onclick={() =>
-            (selectedZoneId = zones[0] ? String(zones[0].id) : undefined)}
+            (selectedZoneId = zones[0] ? zones[0].reference_uuid : undefined)}
         >
           Ver clientes de la zona por defecto
         </button>
@@ -354,12 +329,10 @@
   <ClientBalancesDialog bind:open={balancesOpen} client={balancesClient} />
 {/if}
 
-<ImportClientsDialog bind:open={importOpen} />
-
 {#if historyClient}
   <DeliveryHistoryDialog
     bind:open={historyOpen}
-    clientId={historyClient.id}
+    clientRefUUID={historyClient.reference_uuid}
     clientName={historyClient.name}
   />
 {/if}

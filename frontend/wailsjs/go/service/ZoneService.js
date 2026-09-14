@@ -18,6 +18,10 @@ export function ListZones() {
   return window['go']['service']['ZoneService']['ListZones']();
 }
 
+export function Reinit(arg1) {
+  return window['go']['service']['ZoneService']['Reinit'](arg1);
+}
+
 export function UpdateZone(arg1, arg2) {
   return window['go']['service']['ZoneService']['UpdateZone'](arg1, arg2);
 }

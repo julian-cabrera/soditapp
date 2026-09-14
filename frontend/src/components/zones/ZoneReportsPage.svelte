@@ -34,7 +34,7 @@
     try {
       const isoStart = displayToISO(startDate);
       const isoEnd = displayToISO(endDate);
-      rows = await GetZoneReport(Number(selectedZoneId), isoStart, isoEnd);
+      rows = await GetZoneReport(selectedZoneId, isoStart, isoEnd);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -52,14 +52,14 @@
       <Select.Root type="single" bind:value={selectedZoneId}>
         <Select.Trigger class="w-48">
           {#if selectedZoneId}
-            {zones.find((z) => String(z.id) === selectedZoneId)?.name ?? "Zona"}
+            {zones.find((z) => z.reference_uuid === selectedZoneId)?.name ?? "Zona"}
           {:else}
             Seleccionar zona
           {/if}
         </Select.Trigger>
         <Select.Content>
           {#each zones as zone (zone.id)}
-            <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
+            <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
           {/each}
         </Select.Content>
       </Select.Root>

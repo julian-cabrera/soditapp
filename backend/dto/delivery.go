@@ -11,11 +11,11 @@ const DefaultEntriesPerPage = 25
 
 // DeliveryEntryDTO represents a single client row on a delivery sheet.
 type DeliveryEntryDTO struct {
-	ClientID      int    `json:"client_id"`
+	ClientRefUUID string `json:"client_ref_uuid"`
 	ClientName    string `json:"client_name"`
 	ClientAddress string `json:"client_address"`
 	ClientBalance int    `json:"client_balance"`
-	ProductID     int    `json:"product_id"`
+	ProductRefUUID string `json:"product_ref_uuid"`
 	ProductName   string `json:"product_name"`
 	ChargedUnits  int    `json:"charged_units"`
 	CreditUnits   int    `json:"credit_units"`
@@ -41,11 +41,11 @@ func BuildDeliverySheets(zoneID int, zoneName string, rows []repository.Negative
 	entries := make([]DeliveryEntryDTO, len(rows))
 	for i, row := range rows {
 		entries[i] = DeliveryEntryDTO{
-			ClientID:      row.ClientID,
+			ClientRefUUID: row.ClientRefUUID,
 			ClientName:    row.ClientName,
 			ClientAddress: row.ClientAddress,
 			ClientBalance: row.Balance,
-			ProductID:     row.ProductID,
+			ProductRefUUID: row.ProductRefUUID,
 			ProductName:   row.ProductName,
 		}
 	}

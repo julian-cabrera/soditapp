@@ -1,6 +1,6 @@
-INSERT INTO zone (name) VALUES
-    ('Thompson'),
-    ('Paracao'),
-    ('Centro'),
-    ('Parque Industrial'),
-    ('San Agustín');
+INSERT INTO zone (name, reference_uuid) VALUES
+    ('Thompson',          '0193a001-0000-7000-8000-000000000001'),
+    ('Paracao',           '0193a001-0000-7000-8000-000000000002'),
+    ('Centro',            '0193a001-0000-7000-8000-000000000003'),
+    ('Parque Industrial', '0193a001-0000-7000-8000-000000000004'),
+    ('San Agustín',       '0193a001-0000-7000-8000-000000000005');

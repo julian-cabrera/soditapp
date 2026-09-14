@@ -4,17 +4,19 @@ import {model} from '../models';
 import {context} from '../models';
 import {repository} from '../models';
 
-export function CreateClient(arg1:string,arg2:string,arg3:number):Promise<model.Client>;
+export function CreateClient(arg1:string,arg2:string,arg3:string):Promise<model.Client>;
 
 export function Init(arg1:context.Context,arg2:repository.ClientRepository):Promise<void>;
 
 export function ListClients():Promise<Array<model.Client>>;
 
-export function ListClientsByZone(arg1:number):Promise<Array<model.Client>>;
+export function ListClientsByZone(arg1:string):Promise<Array<model.Client>>;
 
 export function ListInactiveClients():Promise<Array<model.Client>>;
 
-export function MoveClientsToZone(arg1:Array<number>,arg2:number):Promise<void>;
+export function MoveClientsToZone(arg1:Array<string>,arg2:string):Promise<void>;
+
+export function Reinit(arg1:repository.ClientRepository):Promise<void>;
 
 export function ReorderClient(arg1:number,arg2:number,arg3:number):Promise<void>;
 
@@ -22,4 +24,4 @@ export function RestoreClient(arg1:number):Promise<void>;
 
 export function UnregisterClient(arg1:number):Promise<void>;
 
-export function UpdateClient(arg1:number,arg2:string,arg3:string,arg4:number):Promise<void>;
+export function UpdateClient(arg1:number,arg2:string,arg3:string,arg4:string):Promise<void>;

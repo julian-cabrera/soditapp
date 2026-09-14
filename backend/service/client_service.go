@@ -20,22 +20,27 @@ func (s *ClientService) Init(ctx context.Context, repo *repository.ClientReposit
 	s.repo = repo
 }
 
-func (s *ClientService) CreateClient(name, address string, zoneID int) (model.Client, error) {
+// Reinit updates runtime dependencies (called after database import/reopen).
+func (s *ClientService) Reinit(repo *repository.ClientRepository) {
+	s.repo = repo
+}
+
+func (s *ClientService) CreateClient(name, address, zoneRefUUID string) (model.Client, error) {
 	if name == "" {
 		return model.Client{}, fmt.Errorf("client name cannot be empty")
 	}
-	return s.repo.Create(s.ctx, name, address, zoneID)
+	return s.repo.Create(s.ctx, name, address, zoneRefUUID)
 }
 
 func (s *ClientService) ListClients() ([]model.Client, error) {
 	return s.repo.GetAll(s.ctx)
 }
 
-func (s *ClientService) ListClientsByZone(zoneID int) ([]model.Client, error) {
-	return s.repo.GetByZone(s.ctx, zoneID)
+func (s *ClientService) ListClientsByZone(zoneRefUUID string) ([]model.Client, error) {
+	return s.repo.GetByZone(s.ctx, zoneRefUUID)
 }
 
-func (s *ClientService) UpdateClient(id int, name, address string, zoneID int) error {
+func (s *ClientService) UpdateClient(id int, name, address, zoneRefUUID string) error {
 	if name == "" {
 		return fmt.Errorf("client name cannot be empty")
 	}
@@ -43,7 +48,7 @@ func (s *ClientService) UpdateClient(id int, name, address string, zoneID int) e
 		ID:      id,
 		Name:    name,
 		Address: address,
-		ZoneID:  zoneID,
+		ZoneID:  zoneRefUUID,
 	})
 }
 
@@ -59,14 +64,14 @@ func (s *ClientService) RestoreClient(id int) error {
 	return s.repo.Restore(s.ctx, id)
 }
 
-func (s *ClientService) MoveClientsToZone(clientIDs []int, targetZoneID int) error {
-	if len(clientIDs) == 0 {
+func (s *ClientService) MoveClientsToZone(clientRefUUIDs []string, targetZoneRefUUID string) error {
+	if len(clientRefUUIDs) == 0 {
 		return fmt.Errorf("no clients selected")
 	}
-	if targetZoneID <= 0 {
+	if targetZoneRefUUID == "" {
 		return fmt.Errorf("invalid target zone")
 	}
-	return s.repo.BulkUpdateZone(s.ctx, clientIDs, targetZoneID)
+	return s.repo.BulkUpdateZone(s.ctx, clientRefUUIDs, targetZoneRefUUID)
 }
 
 // ReorderClient moves a client between two neighbors within the same zone.
@@ -78,7 +83,7 @@ func (s *ClientService) ReorderClient(clientID int, prevID int, nextID int) erro
 	if err != nil {
 		return fmt.Errorf("getting client: %w", err)
 	}
-	zoneID := client.ZoneID
+	zoneRefUUID := client.ZoneID
 
 	// Helper to get priority of a neighbor (0 if not present)
 	getPriority := func(id int) (int, error) {
@@ -111,7 +116,7 @@ func (s *ClientService) ReorderClient(clientID int, prevID int, nextID int) erro
 		newPriority = nextPrio - repository.DefaultPriorityGap
 		if newPriority <= 0 {
 			// need reindex to make room
-			if err := s.repo.ReindexZone(s.ctx, zoneID, repository.DefaultPriorityGap); err != nil {
+			if err := s.repo.ReindexZone(s.ctx, zoneRefUUID, repository.DefaultPriorityGap); err != nil {
 				return fmt.Errorf("reindex failed: %w", err)
 			}
 			// recompute
@@ -127,7 +132,7 @@ func (s *ClientService) ReorderClient(clientID int, prevID int, nextID int) erro
 			newPriority = (prevPrio + nextPrio) / 2
 		} else {
 			// collision, reindex and recompute
-			if err := s.repo.ReindexZone(s.ctx, zoneID, repository.DefaultPriorityGap); err != nil {
+			if err := s.repo.ReindexZone(s.ctx, zoneRefUUID, repository.DefaultPriorityGap); err != nil {
 				return fmt.Errorf("reindex failed: %w", err)
 			}
 			// re-fetch priorities
