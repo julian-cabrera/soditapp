@@ -25,3 +25,7 @@ export function GetDeliverySheets(arg1) {
 export function Init(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['service']['ClientProductService']['Init'](arg1, arg2, arg3, arg4, arg5);
 }
+
+export function Reinit(arg1, arg2, arg3, arg4) {
+  return window['go']['service']['ClientProductService']['Reinit'](arg1, arg2, arg3, arg4);
+}

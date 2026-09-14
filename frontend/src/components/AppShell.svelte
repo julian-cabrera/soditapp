@@ -7,14 +7,15 @@
     DeliveryTruck01Icon,
     Analytics01Icon,
     ArrowMoveUpLeftIcon,
+    Database01Icon,
   } from "@hugeicons/core-free-icons";
   import { cn } from "$lib/utils.js";
   import ZonesPage from "./zones/ZonesPage.svelte";
   import ClientsPage from "./clients/ClientsPage.svelte";
-  
   import DeliveryPage from "./delivery/DeliveryPage.svelte";
   import ZoneReportsPage from "./zones/ZoneReportsPage.svelte";
   import ZoneReassignPage from "./zones/ZoneReassignPage.svelte";
+  import BackupPage from "./backup/BackupPage.svelte";
   import { ModeWatcher, toggleMode, mode } from "mode-watcher";
   import { MoonIcon, SunIcon } from "@lucide/svelte";
   import Button from "$lib/components/ui/button/button.svelte";
@@ -22,9 +23,10 @@
   type Page =
     | "zones"
     | "clients"
-      | "delivery"
+    | "delivery"
     | "reports"
-    | "reassign";
+    | "reassign"
+    | "backup";
   let currentPage = $state<Page>("zones");
 
   const navItems: {
@@ -34,10 +36,10 @@
   }[] = [
     { page: "zones", label: "Zonas", icon: MapsLocation01Icon },
     { page: "clients", label: "Clientes", icon: UserMultipleIcon },
-
     { page: "delivery", label: "Entregas", icon: DeliveryTruck01Icon },
     { page: "reports", label: "Reportes", icon: Analytics01Icon },
     { page: "reassign", label: "Reasignar", icon: ArrowMoveUpLeftIcon },
+    { page: "backup", label: "Backup", icon: Database01Icon },
   ];
 </script>
 
@@ -84,6 +86,8 @@
       <ZoneReportsPage />
     {:else if currentPage === "reassign"}
       <ZoneReassignPage />
+    {:else if currentPage === "backup"}
+      <BackupPage />
     {/if}
   </main>
 </div>

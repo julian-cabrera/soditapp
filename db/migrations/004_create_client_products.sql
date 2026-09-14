@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS client_product (
-    id          SERIAL PRIMARY KEY,
-    client_id   INTEGER NOT NULL REFERENCES client(id),
-    product_id  INTEGER NOT NULL REFERENCES product(id),
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id   TEXT NOT NULL REFERENCES client(reference_uuid),
+    product_id  TEXT NOT NULL REFERENCES product(reference_uuid),
     balance     INTEGER NOT NULL DEFAULT 0,
     UNIQUE(client_id, product_id)
 );

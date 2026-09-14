@@ -17,12 +17,12 @@
   let sourceZoneId = $state<string | undefined>(undefined);
   let targetZoneId = $state<string | undefined>(undefined);
   let clients = $state<model.Client[]>([]);
-  let selectedIds = $state<Set<number>>(new Set());
+  let selectedIds = $state<Set<string>>(new Set());
   let loading = $state(false);
   let submitting = $state(false);
 
   let availableTargetZones = $derived(
-    zones.filter((z) => String(z.id) !== sourceZoneId),
+    zones.filter((z) => z.reference_uuid !== sourceZoneId),
   );
 
   $effect(() => {
@@ -43,8 +43,8 @@
     targetZoneId = undefined;
     selectedIds = new Set();
     try {
-      clients = await ListClientsByZone(Number(zoneId));
-      selectedIds = new Set(clients.map((c) => c.id));
+      clients = await ListClientsByZone(zoneId);
+      selectedIds = new Set(clients.map((c) => c.reference_uuid));
     } catch (e) {
       toast.error(String(e));
     } finally {
@@ -52,12 +52,12 @@
     }
   }
 
-  function toggleClient(id: number) {
+  function toggleClient(refUUID: string) {
     const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
+    if (next.has(refUUID)) {
+      next.delete(refUUID);
     } else {
-      next.add(id);
+      next.add(refUUID);
     }
     selectedIds = next;
   }
@@ -66,7 +66,7 @@
     if (selectedIds.size === clients.length) {
       selectedIds = new Set();
     } else {
-      selectedIds = new Set(clients.map((c) => c.id));
+      selectedIds = new Set(clients.map((c) => c.reference_uuid));
     }
   }
 
@@ -74,11 +74,11 @@
     if (selectedIds.size === 0 || !targetZoneId) return;
     submitting = true;
     try {
-      await MoveClientsToZone(Array.from(selectedIds), Number(targetZoneId));
+      await MoveClientsToZone(Array.from(selectedIds), targetZoneId);
       toast.success("Clientes reasignados correctamente");
       await Promise.all([fetchZones(), fetchClients()]);
-      clients = await ListClientsByZone(Number(sourceZoneId));
-      selectedIds = new Set(clients.map((c) => c.id));
+      clients = await ListClientsByZone(sourceZoneId!);
+      selectedIds = new Set(clients.map((c) => c.reference_uuid));
       targetZoneId = undefined;
     } catch (e) {
       toast.error(String(e));
@@ -96,14 +96,14 @@
     <Select.Root type="single" bind:value={sourceZoneId}>
       <Select.Trigger class="w-full">
         {#if sourceZoneId}
-          {zones.find((z) => String(z.id) === sourceZoneId)?.name ?? "Zona"}
+          {zones.find((z) => z.reference_uuid === sourceZoneId)?.name ?? "Zona"}
         {:else}
           Seleccionar zona
         {/if}
       </Select.Trigger>
       <Select.Content>
         {#each zones as zone (zone.id)}
-          <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
+          <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
         {/each}
       </Select.Content>
     </Select.Root>
@@ -137,8 +137,8 @@
             <li class="grid grid-cols-3 items-start gap-3">
               <Checkbox
                 id="client-{client.id}"
-                checked={selectedIds.has(client.id)}
-                onCheckedChange={() => toggleClient(client.id)}
+                checked={selectedIds.has(client.reference_uuid)}
+                onCheckedChange={() => toggleClient(client.reference_uuid)}
               />
               <Label
                 for="client-{client.id}"
@@ -162,7 +162,7 @@
           <Select.Root type="single" bind:value={targetZoneId}>
             <Select.Trigger class="w-full">
               {#if targetZoneId}
-                {zones.find((z) => String(z.id) === targetZoneId)?.name ??
+                {zones.find((z) => z.reference_uuid === targetZoneId)?.name ??
                   "Zona"}
               {:else}
                 Mover a...
@@ -170,7 +170,7 @@
             </Select.Trigger>
             <Select.Content>
               {#each availableTargetZones as zone (zone.id)}
-                <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
+                <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
               {/each}
             </Select.Content>
           </Select.Root>

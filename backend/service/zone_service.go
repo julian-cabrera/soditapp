@@ -20,6 +20,11 @@ func (s *ZoneService) Init(ctx context.Context, repo *repository.ZoneRepository)
 	s.repo = repo
 }
 
+// Reinit updates runtime dependencies (called after database import/reopen).
+func (s *ZoneService) Reinit(repo *repository.ZoneRepository) {
+	s.repo = repo
+}
+
 func (s *ZoneService) CreateZone(name string) (model.Zone, error) {
 	if name == "" {
 		return model.Zone{}, fmt.Errorf("zone name cannot be empty")

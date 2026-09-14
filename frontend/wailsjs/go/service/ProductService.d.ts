@@ -12,6 +12,8 @@ export function ListActiveProducts():Promise<Array<model.Product>>;
 
 export function ListProducts():Promise<Array<model.Product>>;
 
+export function Reinit(arg1:repository.ProductRepository):Promise<void>;
+
 export function ToggleProductActive(arg1:number):Promise<void>;
 
 export function UpdateProduct(arg1:number,arg2:string):Promise<void>;

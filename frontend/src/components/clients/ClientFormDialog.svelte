@@ -26,11 +26,11 @@
     if (open) {
       name = client?.name ?? "";
       address = client?.address ?? "";
-      zoneId = client?.zone_id ? String(client.zone_id) : undefined;
+      zoneId = client?.zone_id ? client.zone_id : undefined;
     }
   });
 
-  let zoneMap = $derived(new Map(zones.map((z) => [String(z.id), z.name])));
+  let zoneMap = $derived(new Map(zones.map((z) => [z.reference_uuid, z.name])));
 
   async function handleSubmit(e: SubmitEvent) {
     e.preventDefault();
@@ -40,10 +40,10 @@
     submitting = true;
     try {
       if (isEdit && client) {
-        await updateClient(client.id, trimmedName, address.trim(), Number(zoneId));
+        await updateClient(client.id, trimmedName, address.trim(), zoneId);
         toast.success("Cliente actualizado");
       } else {
-        await createClient(trimmedName, address.trim(), Number(zoneId));
+        await createClient(trimmedName, address.trim(), zoneId);
         toast.success("Cliente creado");
       }
       open = false;
@@ -81,7 +81,7 @@
           </Select.Trigger>
           <Select.Content>
             {#each zones as zone (zone.id)}
-              <Select.Item value={String(zone.id)}>{zone.name}</Select.Item>
+              <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
             {/each}
           </Select.Content>
         </Select.Root>

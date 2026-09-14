@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"strings"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "modernc.org/sqlite"
 )
 
-// Connect opens a PostgreSQL connection using the pgx driver,
-// validates it with a ping, and sets sensible pool limits.
+// Connect opens a SQLite connection using the modernc driver,
+// enables foreign keys, and sets sensible timeouts.
 func Connect(connStr string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", connStr)
+	db, err := sql.Open("sqlite", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
@@ -24,8 +24,7 @@ func Connect(connStr string) (*sql.DB, error) {
 		return nil, fmt.Errorf("pinging database: %w", err)
 	}
 
-	db.SetMaxOpenConns(5)
-	db.SetMaxIdleConns(2)
+	db.SetMaxOpenConns(1)
 
 	return db, nil
 }
@@ -36,7 +35,7 @@ func RunMigrations(db *sql.DB, migrationsFS fs.FS) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version    INTEGER PRIMARY KEY,
-			applied_at TIMESTAMP DEFAULT NOW()
+			applied_at TEXT DEFAULT (datetime('now'))
 		)
 	`)
 	if err != nil {
@@ -63,7 +62,7 @@ func RunMigrations(db *sql.DB, migrationsFS fs.FS) error {
 		}
 
 		var exists bool
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = $1)", version).Scan(&exists)
+		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version = ?)", version).Scan(&exists)
 		if err != nil {
 			return fmt.Errorf("checking migration %d: %w", version, err)
 		}
@@ -86,7 +85,7 @@ func RunMigrations(db *sql.DB, migrationsFS fs.FS) error {
 			return fmt.Errorf("executing migration %s: %w", entry.Name(), err)
 		}
 
-		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES ($1)", version); err != nil {
+		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", version); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("recording migration %d: %w", version, err)
 		}
@@ -105,7 +104,7 @@ func RunSeeds(db *sql.DB, seedsFS fs.FS) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_seeds (
 			version    INTEGER PRIMARY KEY,
-			applied_at TIMESTAMP DEFAULT NOW()
+			applied_at TEXT DEFAULT (datetime('now'))
 		)
 	`)
 	if err != nil {
@@ -132,7 +131,7 @@ func RunSeeds(db *sql.DB, seedsFS fs.FS) error {
 		}
 
 		var exists bool
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM schema_seeds WHERE version = $1)", version).Scan(&exists)
+		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM schema_seeds WHERE version = ?)", version).Scan(&exists)
 		if err != nil {
 			return fmt.Errorf("checking seed %d: %w", version, err)
 		}
@@ -155,7 +154,7 @@ func RunSeeds(db *sql.DB, seedsFS fs.FS) error {
 			return fmt.Errorf("executing seed %s: %w", entry.Name(), err)
 		}
 
-		if _, err := tx.Exec("INSERT INTO schema_seeds (version) VALUES ($1)", version); err != nil {
+		if _, err := tx.Exec("INSERT INTO schema_seeds (version) VALUES (?)", version); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("recording seed %d: %w", version, err)
 		}

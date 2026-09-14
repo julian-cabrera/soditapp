@@ -67,13 +67,13 @@
   });
 
   function handleInput(
-    clientId: number,
-    productId: number,
+    clientRefUUID: string,
+    productRefUUID: string,
     field: "charged" | "credit",
     e: Event,
   ) {
     const target = e.currentTarget as HTMLInputElement;
-    updateEntryEdit(clientId, productId, field, Number(target.value) || 0);
+    updateEntryEdit(clientRefUUID, productRefUUID, field, Number(target.value) || 0);
   }
 
   function buildSheetHTML(
@@ -291,8 +291,8 @@
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {#each groupedEntries() as group (group.clientId)}
-              {#each group.entries as entry, i (entry.product_id)}
+            {#each groupedEntries() as group (group.clientRefUUID)}
+              {#each group.entries as entry, i (entry.product_ref_uuid)}
                 <Table.Row class={i === 0 ? "border-t-2" : ""}>
                   {#if i === 0}
                     <Table.Cell class="font-medium align-top">
@@ -316,12 +316,12 @@
                       min="0"
                       class="h-8 w-20"
                       value={entryEdits.get(
-                        `${entry.client_id}-${entry.product_id}`,
+                        `${entry.client_ref_uuid}::${entry.product_ref_uuid}`,
                       )?.charged ?? 0}
                       oninput={(e) =>
                         handleInput(
-                          entry.client_id,
-                          entry.product_id,
+                          entry.client_ref_uuid,
+                          entry.product_ref_uuid,
                           "charged",
                           e,
                         )}
@@ -333,12 +333,12 @@
                       min="0"
                       class="h-8 w-20"
                       value={entryEdits.get(
-                        `${entry.client_id}-${entry.product_id}`,
+                        `${entry.client_ref_uuid}::${entry.product_ref_uuid}`,
                       )?.credit ?? 0}
                       oninput={(e) =>
                         handleInput(
-                          entry.client_id,
-                          entry.product_id,
+                          entry.client_ref_uuid,
+                          entry.product_ref_uuid,
                           "credit",
                           e,
                         )}

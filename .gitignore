@@ -54,4 +54,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Agents
-.claude/settings.local.json
+.claude
+.github
+.agents
+.codex

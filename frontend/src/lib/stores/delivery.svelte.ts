@@ -6,7 +6,7 @@ import { service, type dto } from "wailsjs/go/models";
 import { formatISO, formatDate } from "$lib/utils/date.js";
 
 export interface ClientGroup {
-  clientId: number;
+  clientRefUUID: string;
   clientName: string;
   clientAddress: string;
   clientBalance: number;
@@ -17,19 +17,19 @@ export function groupEntriesByClient(
   entries: dto.DeliveryEntryDTO[],
 ): ClientGroup[] {
   const groups: ClientGroup[] = [];
-  let lastClientId = -1;
+  let lastClientRefUUID = "";
   for (const entry of entries) {
-    if (entry.client_id === lastClientId) {
+    if (entry.client_ref_uuid === lastClientRefUUID) {
       groups.at(-1)!.entries.push(entry);
     } else {
       groups.push({
-        clientId: entry.client_id,
+        clientRefUUID: entry.client_ref_uuid,
         clientName: entry.client_name,
         clientAddress: entry.client_address,
         clientBalance: entry.client_balance,
         entries: [entry],
       });
-      lastClientId = entry.client_id;
+      lastClientRefUUID = entry.client_ref_uuid;
     }
   }
   return groups;
@@ -105,7 +105,7 @@ export async function fetchDeliverySheets(zoneId: number) {
     const edits = new Map<string, { charged: number; credit: number }>();
     for (const sheet of sheets) {
       for (const entry of sheet.entries) {
-        const key = `${entry.client_id}-${entry.product_id}`;
+        const key = `${entry.client_ref_uuid}::${entry.product_ref_uuid}`;
         if (!edits.has(key)) {
           edits.set(key, { charged: 0, credit: 0 });
         }
@@ -125,12 +125,12 @@ export function setCurrentPage(page: number) {
 }
 
 export function updateEntryEdit(
-  clientId: number,
-  productId: number,
+  clientRefUUID: string,
+  productRefUUID: string,
   field: "charged" | "credit",
   value: number,
 ) {
-  const key = `${clientId}-${productId}`;
+  const key = `${clientRefUUID}::${productRefUUID}`;
   const current = entryEdits.get(key) ?? { charged: 0, credit: 0 };
   current[field] = Math.max(0, value);
   entryEdits.set(key, current);
@@ -144,8 +144,8 @@ export function formatDateShort(date: Date): string {
 export async function confirmDelivery() {
   const deliveryDate = formatISO(selectedDate);
   const adjustments: Array<{
-    client_id: number;
-    product_id: number;
+    client_ref_uuid: string;
+    product_ref_uuid: string;
     delta: number;
     charged_units: number;
     delivery_date: string;
@@ -153,10 +153,10 @@ export async function confirmDelivery() {
 
   for (const [key, edit] of entryEdits) {
     if (edit.charged > 0 || edit.credit > 0) {
-      const [clientId, productId] = key.split("-").map(Number);
+      const [clientRefUUID, productRefUUID] = key.split("::");
       adjustments.push({
-        client_id: clientId,
-        product_id: productId,
+        client_ref_uuid: clientRefUUID,
+        product_ref_uuid: productRefUUID,
         delta: -edit.credit,
         charged_units: edit.charged,
         delivery_date: deliveryDate,

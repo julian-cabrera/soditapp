@@ -12,4 +12,6 @@ export function Init(arg1:context.Context,arg2:repository.ZoneRepository):Promis
 
 export function ListZones():Promise<Array<model.Zone>>;
 
+export function Reinit(arg1:repository.ZoneRepository):Promise<void>;
+
 export function UpdateZone(arg1:number,arg2:string):Promise<void>;

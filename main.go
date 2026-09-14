@@ -36,8 +36,7 @@ func main() {
 			app.ClientSvc,
 			app.ProductSvc,
 			app.ClientProductSvc,
-			app.ExportSvc,
-			app.ImportSvc,
+			app.BackupSvc,
 			app.ReportSvc,
 		},
 	})

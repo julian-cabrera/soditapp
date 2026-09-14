@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"soditapp/backend/dto"
 	"soditapp/backend/model"
@@ -13,11 +12,11 @@ import (
 
 // BalanceAdjustment represents a single balance change in a delivery confirmation.
 type BalanceAdjustment struct {
-	ClientID     int    `json:"client_id"`
-	ProductID    int    `json:"product_id"`
-	Delta        int    `json:"delta"`          // negative value = credit units (increases debt)
-	ChargedUnits int    `json:"charged_units"`  // units paid on the spot (no balance change)
-	DeliveryDate string `json:"delivery_date"`
+	ClientRefUUID string `json:"client_ref_uuid"`
+	ProductRefUUID string `json:"product_ref_uuid"`
+	Delta         int    `json:"delta"`          // negative value = credit units (increases debt)
+	ChargedUnits  int    `json:"charged_units"`  // units paid on the spot (no balance change)
+	DeliveryDate  string `json:"delivery_date"`
 }
 
 // ClientProductService exposes client-product balance operations as Wails-bound methods.
@@ -38,16 +37,24 @@ func (s *ClientProductService) Init(ctx context.Context, db *sql.DB, repo *repos
 	s.txRepo = txRepo
 }
 
-func (s *ClientProductService) EnsureClientProduct(clientID, productID int) (model.ClientProduct, error) {
-	return s.repo.Ensure(s.ctx, clientID, productID)
+// Reinit updates runtime dependencies (called after database import/reopen).
+func (s *ClientProductService) Reinit(db *sql.DB, repo *repository.ClientProductRepository, zoneRepo *repository.ZoneRepository, txRepo *repository.DeliveryTransactionRepository) {
+	s.db = db
+	s.repo = repo
+	s.zoneRepo = zoneRepo
+	s.txRepo = txRepo
 }
 
-func (s *ClientProductService) GetClientBalances(clientID int) ([]model.ClientProduct, error) {
-	return s.repo.GetByClient(s.ctx, clientID)
+func (s *ClientProductService) EnsureClientProduct(clientRefUUID, productRefUUID string) (model.ClientProduct, error) {
+	return s.repo.Ensure(s.ctx, clientRefUUID, productRefUUID)
 }
 
-func (s *ClientProductService) AdjustBalance(clientID, productID, delta int) error {
-	return s.repo.AdjustBalance(s.ctx, clientID, productID, delta)
+func (s *ClientProductService) GetClientBalances(clientRefUUID string) ([]model.ClientProduct, error) {
+	return s.repo.GetByClient(s.ctx, clientRefUUID)
+}
+
+func (s *ClientProductService) AdjustBalance(clientRefUUID, productRefUUID string, delta int) error {
+	return s.repo.AdjustBalance(s.ctx, clientRefUUID, productRefUUID, delta)
 }
 
 // ConfirmDelivery applies multiple balance adjustments in a single transaction.
@@ -67,22 +74,17 @@ func (s *ClientProductService) ConfirmDelivery(adjustments []BalanceAdjustment) 
 			continue
 		}
 		if adj.Delta != 0 {
-			if err := s.repo.AdjustBalanceTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.Delta); err != nil {
-				return fmt.Errorf("adjusting balance for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
+			if err := s.repo.AdjustBalanceTx(s.ctx, tx, adj.ClientRefUUID, adj.ProductRefUUID, adj.Delta); err != nil {
+				return fmt.Errorf("adjusting balance for client %s, product %s: %w", adj.ClientRefUUID, adj.ProductRefUUID, err)
 			}
-		}
-
-		deliveryDate, err := time.Parse("2006-01-02", adj.DeliveryDate)
-		if err != nil {
-			return fmt.Errorf("parsing delivery date %q: %w", adj.DeliveryDate, err)
 		}
 
 		creditUnits := -adj.Delta // delta is stored as negative; invert to get positive credit count
 		if creditUnits < 0 {
 			creditUnits = 0
 		}
-		if err := s.txRepo.InsertTx(s.ctx, tx, adj.ClientID, adj.ProductID, adj.ChargedUnits, creditUnits, deliveryDate); err != nil {
-			return fmt.Errorf("recording transaction for client %d, product %d: %w", adj.ClientID, adj.ProductID, err)
+		if err := s.txRepo.InsertTx(s.ctx, tx, adj.ClientRefUUID, adj.ProductRefUUID, adj.ChargedUnits, creditUnits, adj.DeliveryDate); err != nil {
+			return fmt.Errorf("recording transaction for client %s, product %s: %w", adj.ClientRefUUID, adj.ProductRefUUID, err)
 		}
 	}
 
@@ -99,7 +101,7 @@ func (s *ClientProductService) GetDeliverySheets(zoneID int) ([]dto.DeliveryShee
 		return nil, fmt.Errorf("fetching zone %d: %w", zoneID, err)
 	}
 
-	rows, err := s.repo.GetAllByZone(s.ctx, zoneID)
+	rows, err := s.repo.GetAllByZone(s.ctx, zone.ReferenceUUID)
 	if err != nil {
 		return nil, fmt.Errorf("fetching clients for zone %d: %w", zoneID, err)
 	}

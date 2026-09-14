@@ -18,6 +18,10 @@ export function ListProducts() {
   return window['go']['service']['ProductService']['ListProducts']();
 }
 
+export function Reinit(arg1) {
+  return window['go']['service']['ProductService']['Reinit'](arg1);
+}
+
 export function ToggleProductActive(arg1) {
   return window['go']['service']['ProductService']['ToggleProductActive'](arg1);
 }

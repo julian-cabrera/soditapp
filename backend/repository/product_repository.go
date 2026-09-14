@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"soditapp/backend/model"
+
+	"github.com/google/uuid"
 )
 
 // ProductRepository handles database operations for products.
@@ -21,10 +23,14 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 // Create inserts a new product and returns it.
 func (r *ProductRepository) Create(ctx context.Context, name, typ string) (model.Product, error) {
 	var p model.Product
-	err := r.db.QueryRowContext(ctx,
-		"INSERT INTO product (name, type) VALUES ($1, $2) RETURNING id, name, type, active",
-		name, typ,
-	).Scan(&p.ID, &p.Name, &p.Type, &p.Active)
+	refUUID, err := uuid.NewV7()
+	if err != nil {
+		return p, fmt.Errorf("generating UUID: %w", err)
+	}
+	err = r.db.QueryRowContext(ctx,
+		"INSERT INTO product (name, type, reference_uuid) VALUES (?, ?, ?) RETURNING id, name, type, active, reference_uuid",
+		name, typ, refUUID.String(),
+	).Scan(&p.ID, &p.Name, &p.Type, &p.Active, &p.ReferenceUUID)
 	if err != nil {
 		return p, fmt.Errorf("creating product: %w", err)
 	}
@@ -35,7 +41,7 @@ func (r *ProductRepository) Create(ctx context.Context, name, typ string) (model
 func (r *ProductRepository) GetByID(ctx context.Context, id int) (model.Product, error) {
 	var p model.Product
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, name, type, active FROM product WHERE id = $1",
+		"SELECT id, name, type, active FROM product WHERE id = ?",
 		id,
 	).Scan(&p.ID, &p.Name, &p.Type, &p.Active)
 	if err != nil {
@@ -66,7 +72,7 @@ func (r *ProductRepository) GetAll(ctx context.Context) ([]model.Product, error)
 // GetActive returns only active products ordered by name.
 func (r *ProductRepository) GetActive(ctx context.Context) ([]model.Product, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT id, name, type, active FROM product WHERE active = TRUE ORDER BY name",
+		"SELECT id, name, type, active FROM product WHERE active = 1 ORDER BY name",
 	)
 	if err != nil {
 		return nil, fmt.Errorf("listing active products: %w", err)
@@ -87,7 +93,7 @@ func (r *ProductRepository) GetActive(ctx context.Context) ([]model.Product, err
 // Update modifies a product's name.
 func (r *ProductRepository) Update(ctx context.Context, id int, name string) error {
 	_, err := r.db.ExecContext(ctx,
-		"UPDATE product SET name = $1 WHERE id = $2",
+		"UPDATE product SET name = ? WHERE id = ?",
 		name, id,
 	)
 	if err != nil {
@@ -99,7 +105,7 @@ func (r *ProductRepository) Update(ctx context.Context, id int, name string) err
 // ToggleActive flips a product's active status.
 func (r *ProductRepository) ToggleActive(ctx context.Context, id int) error {
 	_, err := r.db.ExecContext(ctx,
-		"UPDATE product SET active = NOT active WHERE id = $1",
+		"UPDATE product SET active = NOT active WHERE id = ?",
 		id,
 	)
 	if err != nil {
@@ -111,7 +117,7 @@ func (r *ProductRepository) ToggleActive(ctx context.Context, id int) error {
 // Delete removes a product by its ID.
 func (r *ProductRepository) Delete(ctx context.Context, id int) error {
 	_, err := r.db.ExecContext(ctx,
-		"DELETE FROM product WHERE id = $1",
+		"DELETE FROM product WHERE id = ?",
 		id,
 	)
 	if err != nil {

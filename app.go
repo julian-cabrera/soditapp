@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"soditapp/backend/database"
 	"soditapp/backend/repository"
@@ -17,6 +18,7 @@ import (
 type App struct {
 	ctx          context.Context
 	db           *sql.DB
+	connStr      string
 	migrationsFS fs.FS
 	seedsFS      fs.FS
 
@@ -24,8 +26,7 @@ type App struct {
 	ClientSvc        *service.ClientService
 	ProductSvc       *service.ProductService
 	ClientProductSvc *service.ClientProductService
-	ExportSvc        *service.ExportService
-	ImportSvc        *service.ImportService
+	BackupSvc        *service.BackupService
 	ReportSvc        *service.ReportService
 }
 
@@ -39,8 +40,7 @@ func NewApp(migrationsFS, seedsFS fs.FS) *App {
 		ClientSvc:        &service.ClientService{},
 		ProductSvc:       &service.ProductService{},
 		ClientProductSvc: &service.ClientProductService{},
-		ExportSvc:        &service.ExportService{},
-		ImportSvc:        &service.ImportService{},
+		BackupSvc:        &service.BackupService{},
 		ReportSvc:        &service.ReportService{},
 	}
 }
@@ -51,9 +51,22 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	connStr := os.Getenv("SODITAPP_DB_URL")
+	dbPath := ""
 	if connStr == "" {
-		connStr = "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
+		configDir, err := os.UserConfigDir()
+		if err != nil {
+			runtime.LogFatalf(ctx, "Failed to get config directory: %s", err.Error())
+			return
+		}
+		dbDir := filepath.Join(configDir, "SoditApp")
+		if err := os.MkdirAll(dbDir, 0755); err != nil {
+			runtime.LogFatalf(ctx, "Failed to create config directory: %s", err.Error())
+			return
+		}
+		dbPath = filepath.Join(dbDir, "soditapp.db")
+		connStr = "file:" + dbPath + "?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)"
 	}
+	a.connStr = connStr
 
 	db, err := database.Connect(connStr)
 	if err != nil {
@@ -84,8 +97,33 @@ func (a *App) startup(ctx context.Context) {
 	a.ClientSvc.Init(ctx, clientRepo)
 	a.ProductSvc.Init(ctx, productRepo)
 	a.ClientProductSvc.Init(ctx, db, clientProductRepo, zoneRepo, deliveryTxRepo)
-	a.ExportSvc.Init(ctx, zoneRepo, clientRepo, clientProductRepo)
-	a.ImportSvc.Init(ctx, clientRepo, zoneRepo)
+
+	// BackupService needs a reopen callback for import
+	reopenDB := func() error {
+		if a.db != nil {
+			a.db.Close()
+		}
+		newDB, err := database.Connect(a.connStr)
+		if err != nil {
+			return err
+		}
+		a.db = newDB
+		// Reinitialize repos with the new connection
+		zoneRepo = repository.NewZoneRepository(newDB)
+		clientRepo = repository.NewClientRepository(newDB)
+		productRepo = repository.NewProductRepository(newDB)
+		clientProductRepo = repository.NewClientProductRepository(newDB)
+		deliveryTxRepo = repository.NewDeliveryTransactionRepository(newDB)
+		// Reinitialize all services with new repos
+		a.ZoneSvc.Reinit(zoneRepo)
+		a.ClientSvc.Reinit(clientRepo)
+		a.ProductSvc.Reinit(productRepo)
+		a.ClientProductSvc.Reinit(newDB, clientProductRepo, zoneRepo, deliveryTxRepo)
+		a.ReportSvc.Reinit(deliveryTxRepo)
+		return nil
+	}
+
+	a.BackupSvc.Init(ctx, db, dbPath, reopenDB)
 	a.ReportSvc.Init(ctx, deliveryTxRepo)
 }
 

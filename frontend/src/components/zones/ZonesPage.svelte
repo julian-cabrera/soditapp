@@ -1,24 +1,13 @@
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
-  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon, Download01Icon } from "@hugeicons/core-free-icons";
+  import { PencilEdit01Icon, Delete01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import * as Table from "$lib/components/ui/table/index.js";
-  import { toast } from "svelte-sonner";
-  import { ExportZones } from "wailsjs/go/service/ExportService";
   import { getZones, getZonesLoading, fetchZones } from "$lib/stores/zones.svelte.js";
   import ZoneFormDialog from "./ZoneFormDialog.svelte";
   import ZoneDeleteDialog from "./ZoneDeleteDialog.svelte";
   import type { model } from "wailsjs/go/models";
-
-  async function exportZones() {
-    try {
-      await ExportZones();
-      toast.success("Zonas exportadas correctamente");
-    } catch (e) {
-      toast.error(String(e));
-    }
-  }
 
   let formOpen = $state(false);
   let deleteOpen = $state(false);
@@ -55,10 +44,6 @@
   <div class="flex items-center justify-between">
     <h2 class="text-lg font-semibold">Zonas</h2>
     <div class="flex gap-2">
-      <Button variant="outline" size="default" onclick={exportZones}>
-        <HugeiconsIcon icon={Download01Icon} size={14} />
-        Exportar
-      </Button>
       <Button size="default" onclick={openCreate}>
         <HugeiconsIcon icon={PlusSignIcon} size={14} />
         Nueva Zona
