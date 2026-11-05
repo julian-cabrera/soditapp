@@ -4,7 +4,8 @@
 
 ## About
 
-SoditApp helps a delivery business owner manage clients, zones, products, and unit-based credit balances. It replaces legacy software that no longer runs on modern Windows versions.
+SoditApp helps a delivery business owner manage clients, zones, products, and unit-based credit balances. 
+It was created as a specific need to replace legacy software that no longer runs on modern Windows versions.
 
 **Key features:**
 - CRUD for Clients, Zones, and Products
