@@ -1,0 +1,338 @@
+<script lang="ts">
+  import { HugeiconsIcon } from "@hugeicons/svelte";
+  import {
+    PencilEdit01Icon,
+    Delete01Icon,
+    PlusSignIcon,
+    Coins01Icon,
+    TimeScheduleIcon,
+  } from "@hugeicons/core-free-icons";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import * as Table from "$lib/components/ui/table/index.js";
+  import * as Select from "$lib/components/ui/select/index.js";
+  import { Badge } from "$lib/components/ui/badge/index.js";
+  import {
+    getClients,
+    getClientsLoading,
+    fetchClients,
+    fetchClientsByZone,
+    reorderClient,
+  } from "$lib/stores/clients.svelte.js";
+  import { getZones, fetchZones } from "$lib/stores/zones.svelte.js";
+  import ClientFormDialog from "./ClientFormDialog.svelte";
+  import ClientUnregisterDialog from "./ClientUnregisterDialog.svelte";
+  import ClientBalancesDialog from "./ClientBalancesDialog.svelte";
+  import DeliveryHistoryDialog from "./DeliveryHistoryDialog.svelte";
+  import ClientActionDialog from "./ClientActionDialog.svelte";
+  import ClientRestoreDialog from "./ClientRestoreDialog.svelte";
+  import type { model } from "wailsjs/go/models";
+
+  let formOpen = $state(false);
+  let unregisterOpen = $state(false);
+  let balancesOpen = $state(false);
+  let historyOpen = $state(false);
+  let actionOpen = $state(false);
+  let restoreOpen = $state(false);
+  let selectedClient = $state<model.Client | undefined>(undefined);
+  let balancesClient = $state<model.Client | undefined>(undefined);
+  let historyClient = $state<model.Client | undefined>(undefined);
+  let selectedZoneId = $state<string | undefined>(undefined);
+  let searchQuery = $state("");
+
+  // Drag-and-drop state
+  let draggingClient = $state<model.Client | undefined>(undefined);
+
+  function handleDragStart(e: DragEvent, client: model.Client) {
+    draggingClient = client;
+    try {
+      e.dataTransfer?.setData("text/plain", String(client.id));
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  async function handleDrop(e: DragEvent, targetClient: model.Client) {
+    e.preventDefault();
+    if (!draggingClient) return;
+    if (draggingClient.id === targetClient.id) {
+      draggingClient = undefined;
+      return;
+    }
+
+    // Find prev id in current filtered list
+    const idx = filteredClients.findIndex((c) => c.id === targetClient.id);
+    const prevID = idx > 0 ? filteredClients[idx - 1].id : 0;
+    const nextID = targetClient.id;
+
+    try {
+      await reorderClient(draggingClient.id, prevID, nextID);
+      // Refresh list for current zone
+      if (selectedZoneId) {
+        await fetchClientsByZone(selectedZoneId);
+      } else {
+        await fetchClients();
+      }
+    } catch (err) {
+      console.error("reorder failed", err);
+    } finally {
+      draggingClient = undefined;
+    }
+  }
+
+  async function handleDropAtEnd(e: DragEvent) {
+    e.preventDefault();
+    if (!draggingClient) return;
+    // place at end
+    const last = filteredClients[filteredClients.length - 1];
+    const prevID = last ? last.id : 0;
+    const nextID = 0;
+    try {
+      await reorderClient(draggingClient.id, prevID, nextID);
+      if (selectedZoneId) {
+        await fetchClientsByZone(selectedZoneId);
+      } else {
+        await fetchClients();
+      }
+    } catch (err) {
+      console.error("reorder failed", err);
+    } finally {
+      draggingClient = undefined;
+    }
+  }
+
+  let clients = $derived(getClients());
+  let zones = $derived(getZones());
+  let loading = $derived(getClientsLoading());
+  let zoneMap = $derived(new Map(zones.map((z) => [z.reference_uuid, z.name])));
+  let filteredClients = $derived(
+    searchQuery
+      ? clients.filter((c) => {
+          const q = searchQuery.toLowerCase();
+          return (
+            c.name.toLowerCase().includes(q) ||
+            (c.address ?? "").toLowerCase().includes(q)
+          );
+        })
+      : clients,
+  );
+
+  $effect(() => {
+    fetchZones();
+    fetchClients();
+  });
+
+  $effect(() => {
+    if (zones.length > 0 && !selectedZoneId) {
+      selectedZoneId = zones[0].reference_uuid;
+    }
+  });
+
+  $effect(() => {
+    if (selectedZoneId) {
+      fetchClientsByZone(selectedZoneId);
+    } else {
+      fetchClients();
+    }
+  });
+
+  function openCreate() {
+    actionOpen = true;
+  }
+
+  function handleAddNew() {
+    selectedClient = undefined;
+    formOpen = true;
+  }
+
+  function handleRestore() {
+    restoreOpen = true;
+  }
+
+  function openEdit(client: model.Client) {
+    selectedClient = client;
+    formOpen = true;
+  }
+
+  function openUnregister(client: model.Client) {
+    selectedClient = client;
+    unregisterOpen = true;
+  }
+
+  function openBalances(client: model.Client) {
+    balancesClient = client;
+    balancesOpen = true;
+  }
+
+  function openHistory(client: model.Client) {
+    historyClient = client;
+    historyOpen = true;
+  }
+</script>
+
+<div class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold">Clientes</h2>
+    <div class="flex gap-2">
+      <Button size="default" onclick={openCreate}>
+        <HugeiconsIcon icon={PlusSignIcon} size={14} />
+        Nuevo Cliente
+      </Button>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2">
+    <Input
+      placeholder="Buscar por nombre o dirección..."
+      bind:value={searchQuery}
+      class="max-w-xs"
+    />
+    <span class="text-sm text-muted-foreground">Zona:</span>
+    <Select.Root type="single" bind:value={selectedZoneId}>
+      <Select.Trigger class="w-100 truncate">
+        {#if selectedZoneId}
+          {zoneMap.get(selectedZoneId) ?? "Zona"}
+        {:else}
+          Zona
+        {/if}
+      </Select.Trigger>
+      <Select.Content>
+        {#each zones as zone (zone.id)}
+          <Select.Item value={zone.reference_uuid}>{zone.name}</Select.Item>
+        {/each}
+      </Select.Content>
+    </Select.Root>
+  </div>
+
+  {#if loading}
+    <p class="text-sm text-muted-foreground">Cargando...</p>
+  {:else if filteredClients.length === 0}
+    {#if selectedZoneId && selectedZoneId !== "all"}
+      <div
+        class="flex flex-col items-start gap-2 rounded-md border border-dashed p-6 text-sm text-muted-foreground"
+      >
+        <p>Esta zona no tiene clientes registrados.</p>
+        <button
+          class="text-foreground underline underline-offset-2 hover:text-primary"
+          onclick={() =>
+            (selectedZoneId = zones[0] ? zones[0].reference_uuid : undefined)}
+        >
+          Ver clientes de la zona por defecto
+        </button>
+      </div>
+    {:else}
+      <p class="text-sm text-muted-foreground">No hay clientes registrados.</p>
+    {/if}
+  {:else}
+    <Table.Root>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>Nombre</Table.Head>
+          <Table.Head>Dirección</Table.Head>
+          <Table.Head class="w-40 text-right">Acciones</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {#each filteredClients as client (client.id)}
+          <Table.Row>
+            <Table.Cell>
+              <div
+                role="button"
+                tabindex="0"
+                aria-label="Arrastrar cliente"
+                draggable={true}
+                ondragstart={(e) => handleDragStart(e as DragEvent, client)}
+                ondragover={(e) => e.preventDefault()}
+                ondrop={(e) => handleDrop(e as DragEvent, client)}
+                class="flex items-center gap-2"
+              >
+                <span class="cursor-grab">☰</span>
+                <span>{client.name}</span>
+              </div>
+            </Table.Cell>
+            <Table.Cell class="text-muted-foreground"
+              >{client.address || "—"}</Table.Cell
+            >
+            <Table.Cell class="text-right">
+              <div class="flex justify-end gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openHistory(client)}
+                  title="Ver Historial"
+                >
+                  <HugeiconsIcon icon={TimeScheduleIcon} size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openBalances(client)}
+                  title="Saldos"
+                >
+                  <HugeiconsIcon icon={Coins01Icon} size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openEdit(client)}
+                  title="Editar"
+                >
+                  <HugeiconsIcon icon={PencilEdit01Icon} size={14} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onclick={() => openUnregister(client)}
+                  title="Dar de baja"
+                >
+                  <HugeiconsIcon icon={Delete01Icon} size={14} />
+                </Button>
+              </div>
+            </Table.Cell>
+          </Table.Row>
+        {/each}
+        <!-- Drop area at end -->
+        <Table.Row>
+          <Table.Cell colspan={3}>
+            <div
+              role="button"
+              tabindex="0"
+              aria-label="Arrastrar al final"
+              ondragover={(e) => e.preventDefault()}
+              ondrop={handleDropAtEnd}
+              class="text-center text-sm text-muted-foreground"
+            >
+              Arrastra aquí para mover al final
+            </div>
+          </Table.Cell>
+        </Table.Row>
+      </Table.Body>
+    </Table.Root>
+  {/if}
+</div>
+
+<ClientFormDialog bind:open={formOpen} client={selectedClient} {zones} />
+
+<ClientActionDialog
+  bind:open={actionOpen}
+  onAdd={handleAddNew}
+  onRestore={handleRestore}
+/>
+
+<ClientRestoreDialog bind:open={restoreOpen} />
+
+{#if selectedClient}
+  <ClientUnregisterDialog bind:open={unregisterOpen} client={selectedClient} />
+{/if}
+
+{#if balancesClient}
+  <ClientBalancesDialog bind:open={balancesOpen} client={balancesClient} />
+{/if}
+
+{#if historyClient}
+  <DeliveryHistoryDialog
+    bind:open={historyOpen}
+    clientRefUUID={historyClient.reference_uuid}
+    clientName={historyClient.name}
+  />
+{/if}
